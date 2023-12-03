@@ -1,0 +1,27 @@
+RoutinePlus_Turbo
+├── controllers
+│   └── data_controller.py
+├── data
+│   └── app_data.py
+├── dev
+│   ├── env_config.py
+│   └── get_tree_structure.py
+├── models
+│   └── table_model.py
+├── resources
+├── styles
+│   ├── all_styles.py
+│   ├── SettingsUIStyles.py
+│   └── default.py
+├── utils
+│   ├── app_logging.py
+│   ├── helper_fn.py
+│   └── singleton.py
+└── views
+    ├── appearance
+    │   └── table_styles.py
+    ├── table_view.py
+    ├── left_bar.py
+    ├── main_interface.py
+    ├── main_frame.py
+    └── ribbon.py

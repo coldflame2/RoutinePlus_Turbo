@@ -1,0 +1,67 @@
+***main()***
+creates:
+ - TableModel
+ - TableView
+ - Controller (model, view)
+
+ Passes to MainApp args:
+- controller
+- view
+
+imports and then creates:
+ - MainFrame (args: view, controller)
+
+
+
+
+
+***TableModel***
+
+Imports and creates instance:
+- AppData
+
+Gets data from AppData method:
+- AppData.get_all_entries()
+
+
+
+***AppData***
+
+
+
+
+
+***Controller***
+
+Instance variables from args:
+- model
+- view
+
+
+
+
+***MainFrame***
+
+instance variables from args:
+ - view
+ - controller
+
+Imports UI components:
+ - TitleBar
+ - Ribbon
+ - LeftBar
+ - Splitter
+
+ Adds Widgets:
+ - LeftBar
+ - View (instance from args)
+
+
+
+
+ ***TableView***
+ No imports, no creation, no arguments
+
+
+
+
