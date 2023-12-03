@@ -12,31 +12,6 @@ title_bar_color = main_color
 
 HEADERS_STYLE = "background-color: red;"
 
-TABLE_STYLES = ("""
-    QTableView {
-        background-color: #DDEAF0;
-    }
-    
-    QTableView::item {
-        border: none;
-        border-bottom: 1px solid black;
-    }
-    
-    QHeaderView::section 
-    {
-        background-color: #36436A;
-        color: #DDEAF3;
-        font-size: 12pt;
-        font-family: "Calibri";
-        padding: 2px;
-        border-right: 1px solid #B1B8BB;
-    }
-    
-    QTableCornerButton::section {
-        background-color: #36436A;
-    }
-    
-""")
 
 
 

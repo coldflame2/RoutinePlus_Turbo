@@ -9,10 +9,7 @@ default_task_dict = [{
     'id': 1, 'from_time': '00:01 AM', 'to_time': '07:00 AM', 'duration': '419 Minutes',
     'task_name': 'Wake up', 'reminders': ''
     }, {
-    'id': 2, 'from_time': '', 'to_time': '', 'duration': '',
-    'task_name': '', 'reminders': ''
-    }, {
-    'id': 3, 'from_time': '07:00 AM', 'to_time': '07:30 AM', 'duration': '30 Minutes',
+    'id': 2, 'from_time': '07:00 AM', 'to_time': '07:30 AM', 'duration': '30 Minutes',
     'task_name': 'Get ready', 'reminders': '06:55 AM'
     }]
 

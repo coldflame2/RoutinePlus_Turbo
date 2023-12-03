@@ -4,7 +4,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QAbstractItemView, QTableView)
 
-from src.resources.styles import all_styles
+from src.resources.styles import table_qss
 from src.views.delegates.spacing_delegate import SpacingDelegate
 
 
@@ -19,6 +19,7 @@ class TableView(QTableView):
 
     def setModel(self, model):
         super().setModel(model)
+        self.setViewportMargins(0, 0, 0, 0)
 
         self.set_properties()
 
@@ -31,7 +32,6 @@ class TableView(QTableView):
 
         self.horizontalHeader().setVisible(True)
         self.verticalHeader().setVisible(False)  # if you want vertical headers as well
-
 
         self.set_triggers()
         self.set_height()
@@ -46,8 +46,8 @@ class TableView(QTableView):
             logging.error(f" Exception type:{type(e)} set_properties in TableView (Error Description:{e}")
 
     def set_height(self):
-        row_height = 20
+        row_height = 35
         self.verticalHeader().setDefaultSectionSize(row_height)
 
     def apply_styles(self):
-        self.setStyleSheet(all_styles.TABLE_STYLES)
+        self.setStyleSheet(table_qss.TABLE_STYLES)
