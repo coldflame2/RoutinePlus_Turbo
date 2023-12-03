@@ -41,8 +41,8 @@ class AppData:
         create_table_query = """
         CREATE TABLE IF NOT EXISTS daily_routine (
             id INTEGER PRIMARY KEY,
-            from_time TEXT,
-            to_time TEXT,
+            from_time DATETIME,
+            to_time DATETIME,
             duration TEXT,
             task_name TEXT,
             reminders TEXT
@@ -60,36 +60,55 @@ class AppData:
         """
         logging.debug(f"Getting all entries.")
         select_query = "SELECT * FROM daily_routine"
+
         try:
             cursor = self.conn.execute(select_query)
             """
             fetchall() is a list of dictionaries.
             row_factory returns a dictionary for one row, but fetchall compiles all dictionaries into a list.
             """
-            data = cursor.fetchall()  # List of dictionaries
-
-            if len(data) == 0:
-
-                default_task_dict = default.default_task_dict
-                logging.debug(f"No data found in database file. Inserting default task: {default_task_dict}")
-                for entry in default_task_dict:
-                    self.insert_entries(entry)
-                return default_task_dict
-
-            logging.debug(f"Data found in database file. Returning existing data: {data}")
-
-            return data
+            rows_data = cursor.fetchall()  # List of dictionaries
 
         except Exception as e:
-            logging.error(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {type(e)}. {e}")
             return []  # Called in TableModel
+
+        if len(rows_data) == 0:
+
+            default_tasks = default.default_task_dict
+            logging.debug(f"No data found in database file. Inserting default task: {default_tasks}")
+            for each_task_dict in default_tasks:
+
+                self.insert_entries(each_task_dict)
+            return default_tasks
+
+        datetime_data = []  # to store textual data from database after converting to DateTime
+        for each_row_data in rows_data:
+            # Convert each row to a dictionary and parse datetime fields
+            row_dict = dict(each_row_data)
+            row_dict['from_time'] = helper_fn.parse_datetime(row_dict['from_time'])
+            row_dict['to_time'] = helper_fn.parse_datetime(row_dict['to_time'])
+            datetime_data.append(row_dict)
+        logging.debug(f"Data found in database file. Returning existing data: {datetime_data}")
+        return datetime_data
 
     def save_all(self, data_to_save):
         """ Update or insert entries in the database based on provided data. """
-        for entry in data_to_save:
+
+        string_formatted = []  # to store textual data from database after converting to DateTime
+        for each_row_data in data_to_save:
+            # Convert each row to a dictionary and parse datetime fields
+            row_dict = dict(each_row_data)
+            row_dict['from_time'] = helper_fn.format_datetime(row_dict['from_time'])
+            row_dict['to_time'] = helper_fn.format_datetime(row_dict['to_time'])
+            string_formatted.append(row_dict)
+
+        for entry in string_formatted:
+
             if self.record_exists(entry['id']):
                 self.update_record(entry)
             else:
+
                 self.insert_entries(entry)
 
     def record_exists(self, record_id):

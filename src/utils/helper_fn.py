@@ -56,6 +56,15 @@ def dict_factory(cursor, row):
     return column_name_value_dict
 
 
+def parse_datetime(datetime_str):
+    format = "%I:%M %p, %Y-%m-%d"
+    return datetime.strptime(datetime_str, format)
+
+def format_datetime(datetime):
+    format_str = "%I:%M %p, %Y-%m-%d"
+    return datetime.strftime(format_str)
+
+
 def lighten_color(color, factor=0.1):
     color = QColor(color)
     light_factor = int(100 + factor * 100)

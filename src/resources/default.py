@@ -1,17 +1,39 @@
 import os
 import sys
+from datetime import datetime
+
 from aenum import Enum, NoAlias
+from datetime import datetime
 
 COLUMN_KEYS = ["from_time", "to_time", "duration", "task_name", "reminders"]
 VISIBLE_HEADERS = ["Start", "End", "Duration", "Task", "Reminders"]
 
-default_task_dict = [{
-    'id': 1, 'from_time': '00:01 AM', 'to_time': '07:00 AM', 'duration': '419 Minutes',
-    'task_name': 'Wake up', 'reminders': ''
-    }, {
-    'id': 2, 'from_time': '07:00 AM', 'to_time': '07:30 AM', 'duration': '30 Minutes',
-    'task_name': 'Get ready', 'reminders': '06:55 AM'
-    }]
+
+def convert_to_datetime(time_str):
+    # Parsing the time string and adding the fixed date
+    format = "%I:%M %p, %Y-%m-%d"
+    return datetime.strptime(f'{time_str}, 2023-01-01', format)
+
+
+default_task_dict = [
+    {
+        'id': 1, 'from_time': '12:01 AM', 'to_time': '07:00 AM', 'duration': '419 Minutes',
+        'task_name': 'Wake up', 'reminders': ''
+        },
+    {
+        'id': 2, 'from_time': '07:00 AM', 'to_time': '07:30 AM', 'duration': '30 Minutes',
+        'task_name': 'Get ready', 'reminders': '06:55 AM'
+        }
+    ]
+
+# Convert specific keys to datetime objects
+for task in default_task_dict:
+    for key in COLUMN_KEYS:
+        if key in ["from_time", "to_time"]:
+            task[key] = convert_to_datetime(task[key])
+
+
+# Now default_task_dict contains datetime objects for from_time and to_time
 
 
 class ColorsEn(Enum):

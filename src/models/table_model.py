@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 
@@ -9,20 +10,17 @@ from src.resources.default import COLUMN_KEYS, VISIBLE_HEADERS
 class TableModel(QAbstractItemModel):
     def __init__(self):
         super().__init__()
-        logging.debug(f"TableModel Class starting.")
-
         self.visible_headers = VISIBLE_HEADERS  # Visible headers for UI
         self.column_keys = COLUMN_KEYS  # Keys (str) used internally
 
         self.app_data = AppData()
         try:
             self._data = self.app_data.get_all_entries()
+            logging.debug(f"Data in TableModel Constructor: '{self._data}'")
         except Exception as e:
             logging.error(f"Exception in TableModel init: {e}")
             self.app_data.close()  # Close the database connection on failure
             raise  # Re-raise the exception to signal the failure
-
-        logging.debug(f"TableModel Class constructor successfully initialized.")
 
     def save_to_db_in_model(self):
         """Save the modified data back to the database."""
@@ -39,13 +37,19 @@ class TableModel(QAbstractItemModel):
         This method is called by the view to retrieve the data for a given index. The role parameter specifies what kind of data is being requested (e.g., display data, tooltip data).
 
         """
+
         if not index.isValid() or role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return None
 
-        row_data = self._data[index.row()]  # type=dictionary(column_key:value). Entire row data of index, including id
-        column_key = self.column_keys[index.column()]  # name of the column defined in visible_headers
+        row_data = self._data[index.row()]
+        column_key = self.column_keys[index.column()]
 
-        return row_data.get(column_key, None)  # The value of the cell
+        # If the column is a datetime, format it as a string
+        if column_key in ["from_time", "to_time"] and isinstance(row_data[column_key], datetime):
+            format_str = "%H:%M %p"
+            return row_data[column_key].strftime(format_str)
+
+        return row_data.get(column_key, None)
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         """Called when the user edits a value in a view."""
@@ -59,12 +63,17 @@ class TableModel(QAbstractItemModel):
 
         # Update the specific field in the row data
         try:
+            # Parse datetime fields from string
+            if column_key in ["from_time", "to_time"]:
+                format_str = "%I:%M %p, %Y-%m-%d"
+                value = datetime.strptime(F'{value}, 2023-01-01', format_str)
+
             self._data[row][column_key] = value
             self.dataChanged.emit(index, index, [role])
             logging.debug(f"'setData': value '{value}' set at row:{row} and column_key:'{column_key}'.")
             logging.debug(f"'setData': dataChanged signal emitted.")
-
             return True
+
         except Exception as e:
             logging.error(f"Exception type: {type(e)} in setData (Error Description: {e})")
             return False
