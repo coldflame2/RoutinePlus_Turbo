@@ -127,7 +127,7 @@ class MainFrame(QMainWindow):
         self.restore_geometry()
         self.setStyleSheet(all_styles.MAIN_WINDOW_STYLE)
         self.setWindowTitle(self.env_config_class.APP_NAME)  # Keep this, even though visible win title is custom.
-        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, False)
         self.icon_path = helper_fn.resource_path(
             os.path.join('resources/icons/title_bar_icons', self.env_config_class.ICON_NAME)
             )

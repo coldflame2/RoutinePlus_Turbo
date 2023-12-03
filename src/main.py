@@ -115,7 +115,7 @@ def main():
 
         # main_app.setQuitOnLastWindowClosed(True)  # To prevent app from closing when closing reminder window
 
-        main_app.aboutToQuit.connect(lambda : app_about_to_quit(model))
+        main_app.aboutToQuit.connect(lambda: app_about_to_quit(model))
 
         main_app.main_frame.show()
 

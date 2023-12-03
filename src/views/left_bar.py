@@ -29,8 +29,8 @@ class LeftBar(QObject):
         self.left_layout.addLayout(self.layout_buttons_above)
         self.left_layout.addLayout(self.layout_buttons_below)
 
-        self.left_layout.setContentsMargins(0, 20, 0, 0)  # Left, Top, Right, Bottom margins
-        self.left_layout.setSpacing(10)  # between last top button and first bottom button)
+        self.left_layout.setContentsMargins(0, 1, 0, 0)  # Left, Top, Right, Bottom margins
+        self.left_layout.setSpacing(10)  # between widgets in left layout (so, between last top button and first bottom button)
 
         self.layout_buttons_above.setContentsMargins(0, 0, 0, 0)
         self.layout_buttons_above.setSpacing(10)
@@ -38,21 +38,22 @@ class LeftBar(QObject):
         self.layout_buttons_below.setContentsMargins(0, 0, 0, 0)
         self.layout_buttons_below.setSpacing(10)
 
-        self.current_date_header()
+        self.setup_header()
         self.define_buttons_names()
 
         # Add spacer to absorb extra space and keep button layouts at top and bottom
         spacer = QSpacerItem(1, 1, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         self.left_layout.addItem(spacer)
 
-    def current_date_header(self):
+    def setup_header(self):
         # Create a new horizontal layout for the icon and date label
         self.header_layout = QHBoxLayout()
+        self.header_layout.setSpacing(0)
+        self.header_layout.setContentsMargins(3, 1, 1, 1)
         env_class = helper_fn.get_environment_cls(False, caller='left_bar.py')
         icon_name = env_class.ICON_NAME
-        icon_folders_relative = 'resources/icons/left_bar_icons'
+        icon_folders_relative = 'resources/icons/others/'
         icon_path = helper_fn.resource_path(os.path.join(icon_folders_relative, icon_name))
-        current_date = datetime.now().strftime("%d %B")  # May 3, 2023
 
         # Create a new QLabel for the icon
         self.icon_label = QLabel()
@@ -62,12 +63,17 @@ class LeftBar(QObject):
             )
         self.icon_label.setPixmap(scaled_pixmap)
 
+        # Add the horizontal layout to the main layout
+        self.layout_buttons_above.addLayout(self.header_layout)
+
+        self.header_layout.addWidget(self.icon_label)
+
+    def setup_date_label(self):
+        current_date = datetime.now().strftime("%d %B")  # May 3, 2023
+
         # Create a new QLabel for the date
         self.date_label = QLabel(current_date)
         self.date_label.setStyleSheet("color: white; font-size: 11pt")
-
-        # Add the icon and date labels to the header_layout
-        self.header_layout.addWidget(self.icon_label)
 
         # Add spacer to absorb extra space and keep button layouts at top and bottom
         spacer = QSpacerItem(20, 1, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -78,15 +84,6 @@ class LeftBar(QObject):
         # Add spacer to absorb extra space and keep button layouts at top and bottom
         spacer = QSpacerItem(1, 1, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.header_layout.addItem(spacer)
-
-        # Add some spacing between the icon and the text if needed
-        self.header_layout.setSpacing(0)
-        self.header_layout.setContentsMargins(5, 0, 5, 0)
-
-        # Add the horizontal layout to the main layout
-        self.layout_buttons_above.addLayout(self.header_layout)
-
-        self.date_label.hide()  # Hiding the date for now.
 
     def define_buttons_names(self):
         """
@@ -109,12 +106,14 @@ class LeftBar(QObject):
         self.initialize_buttons(
             primary_buttons_names,
             self.layout_buttons_above,
-            all_styles.LEFT_SIDE_BUTTONS_PRIMARY)
+            all_styles.LEFT_SIDE_BUTTONS_PRIMARY
+            )
 
         self.initialize_buttons(
             secondary_buttons_names,
             self.layout_buttons_below,
-            all_styles.LEFT_SIDE_BUTTONS_SECONDARY)
+            all_styles.LEFT_SIDE_BUTTONS_SECONDARY
+            )
 
     def initialize_buttons(self, buttons_names, layout, style):
         """
