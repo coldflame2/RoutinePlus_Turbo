@@ -19,8 +19,6 @@ class TableView(QTableView):
 
     def setModel(self, model):
         super().setModel(model)
-        self.setViewportMargins(0, 0, 0, 0)
-
         self.set_properties()
 
     def set_properties(self):
@@ -46,7 +44,7 @@ class TableView(QTableView):
             logging.error(f" Exception type:{type(e)} set_properties in TableView (Error Description:{e}")
 
     def set_height(self):
-        row_height = 35
+        row_height = 45
         self.verticalHeader().setDefaultSectionSize(row_height)
 
     def apply_styles(self):

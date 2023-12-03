@@ -110,7 +110,7 @@ class MainFrame(QMainWindow):
         self.left_bar.left_bar_signals.connect(self.connect_to_controller)
 
     def connect_to_controller(self, action):
-        logging.debug(f"Emitting {action} signal from main_frame after catching it from LeftBar.")
+        logging.debug(f"Emitting '{action}' signal from main_frame after catching it from LeftBar.")
         self.controller.signal_from_left_bar(action)
 
     def _configure_title_bar(self):
@@ -128,9 +128,9 @@ class MainFrame(QMainWindow):
         self.setStyleSheet(all_styles.MAIN_WINDOW_STYLE)
         self.setWindowTitle(self.env_config_class.APP_NAME)  # Keep this, even though visible win title is custom.
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, False)
-        self.icon_path = helper_fn.resource_path(
-            os.path.join('resources/icons/title_bar_icons', self.env_config_class.ICON_NAME)
-            )
+
+        title_bar_icon_relative_path = (os.path.join('resources/icons/title_bar_icons', self.env_config_class.ICON_NAME))
+        self.icon_path = helper_fn.resource_path(title_bar_icon_relative_path)
         self.setWindowIcon(QIcon(self.icon_path))
 
     def set_win_state_and_geometry(self):

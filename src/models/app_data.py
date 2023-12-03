@@ -74,42 +74,37 @@ class AppData:
             return []  # Called in TableModel
 
         if len(rows_data) == 0:
+            logging.debug(f"No data found in database file. Inserting default task: {default.default_tasks}")
+            for each_task_dict in default.default_tasks:
+                self.insert_row_data(each_task_dict)
+            return default.default_tasks
 
-            default_tasks = default.default_task_dict
-            logging.debug(f"No data found in database file. Inserting default task: {default_tasks}")
-            for each_task_dict in default_tasks:
-
-                self.insert_entries(each_task_dict)
-            return default_tasks
-
-        datetime_data = []  # to store textual data from database after converting to DateTime
+        existing_data_formatted = []  # to store formatted data after converting string from database to datetime
         for each_row_data in rows_data:
-            # Convert each row to a dictionary and parse datetime fields
-            row_dict = dict(each_row_data)
-            row_dict['from_time'] = helper_fn.parse_datetime(row_dict['from_time'])
-            row_dict['to_time'] = helper_fn.parse_datetime(row_dict['to_time'])
-            datetime_data.append(row_dict)
-        logging.debug(f"Data found in database file. Returning existing data: {datetime_data}")
-        return datetime_data
+            each_row_data['from_time'] = helper_fn.string_to_datetime(each_row_data['from_time'])
+            each_row_data['to_time'] = helper_fn.string_to_datetime(each_row_data['to_time'])
+
+            existing_data_formatted.append(each_row_data)
+        logging.debug(f"Data found in database file. Returning existing data: {existing_data_formatted}")
+        return existing_data_formatted
 
     def save_all(self, data_to_save):
         """ Update or insert entries in the database based on provided data. """
 
-        string_formatted = []  # to store textual data from database after converting to DateTime
-        for each_row_data in data_to_save:
-            # Convert each row to a dictionary and parse datetime fields
-            row_dict = dict(each_row_data)
-            row_dict['from_time'] = helper_fn.format_datetime(row_dict['from_time'])
-            row_dict['to_time'] = helper_fn.format_datetime(row_dict['to_time'])
-            string_formatted.append(row_dict)
+        try:
+            string_formatted = []  # to store textual data from database after converting to DateTime
+            for each_row_data in data_to_save:
+                string_formatted.append(each_row_data)
 
-        for entry in string_formatted:
+            for entry in string_formatted:
 
-            if self.record_exists(entry['id']):
-                self.update_record(entry)
-            else:
+                if self.record_exists(entry['id']):
+                    self.update_record(entry)
+                else:
 
-                self.insert_entries(entry)
+                    self.insert_row_data(entry)
+        except Exception as e:
+            logging.error(f" Exception type:{type(e)} while saving (Error Description:{e}")
 
     def record_exists(self, record_id):
         """ Check if a record exists in the database. """
@@ -130,15 +125,15 @@ class AppData:
 
         self.conn.commit()
 
-    def insert_entries(self, updated_data_dict):
+    def insert_row_data(self, row_data):
         """ Write method to save to the file """
-        logging.debug(f"Inserting data to SQLite Data file. input data type:{type(updated_data_dict)}")
+        logging.debug(f"Inserting row data to SQLite file. Input type:{type(row_data)}. Data:{row_data}")
         # Assuming updated_data is a dictionary with the required keys
         insert_query = """
         INSERT INTO daily_routine (id, from_time, to_time, duration, task_name, reminders)
         VALUES (:id, :from_time, :to_time, :duration, :task_name, :reminders)
         """
-        self.conn.execute(insert_query, updated_data_dict)
+        self.conn.execute(insert_query, row_data)
         self.conn.commit()
 
 

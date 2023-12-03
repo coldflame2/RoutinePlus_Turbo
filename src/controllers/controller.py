@@ -20,7 +20,7 @@ class Controller:
         self.action_map = {
             'Save': self.model.save_to_db_in_model,
             'Save As': self.save_table_data_as,
-            'New Task': self.create_new_task,
+            'New Task': self.model.add_new_task,
             }
 
         if action in self.action_map:
@@ -34,6 +34,7 @@ class Controller:
                     f" Exception type:{type(e)} while calling action_map with action name {action} (Description:{e}"
                     )
                 return None
+
 
     def testing(self):
         print(f" 'model': '{self.model}'")

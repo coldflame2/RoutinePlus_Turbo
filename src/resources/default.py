@@ -1,69 +1,45 @@
+import logging
 import os
 import sys
-from datetime import datetime
-
 from aenum import Enum, NoAlias
 from datetime import datetime
 
 COLUMN_KEYS = ["from_time", "to_time", "duration", "task_name", "reminders"]
 VISIBLE_HEADERS = ["Start", "End", "Duration", "Task", "Reminders"]
 
+# Constants
+DATE_FORMAT = "%I:%M %p, %Y-%m-%d"
+DATETIME_COLUMN_KEYS = ["from_time", "to_time"]
+FIXED_DATE = "2023-01-01"
+
 
 def convert_to_datetime(time_str):
-    # Parsing the time string and adding the fixed date
-    format = "%I:%M %p, %Y-%m-%d"
-    return datetime.strptime(f'{time_str}, 2023-01-01', format)
+    """ Convert time string to datetime object with a fixed date. """
+    try:
+        return datetime.strptime(f'{time_str}, {FIXED_DATE}', DATE_FORMAT)
+    except Exception as e:
+        logging.error(f"Exception type: {type(e)} while converting to datetime. Description: {e}")
+        return None
 
 
-default_task_dict = [
+default_tasks = [
     {
-        'id': 1, 'from_time': '12:01 AM', 'to_time': '07:00 AM', 'duration': '419 Minutes',
-        'task_name': 'Wake up', 'reminders': ''
+        'id': 1,
+        'from_time': convert_to_datetime('12:01 AM'),
+        'to_time': convert_to_datetime('07:00 AM'),
+        'duration': '419 Minutes',
+        'task_name': 'Wake up',
+        'reminders': ''
         },
     {
-        'id': 2, 'from_time': '07:00 AM', 'to_time': '07:30 AM', 'duration': '30 Minutes',
-        'task_name': 'Get ready', 'reminders': '06:55 AM'
+        'id': 2,
+        'from_time': convert_to_datetime('07:00 AM'),
+        'to_time': convert_to_datetime('07:30 AM'),
+        'duration': '30 Minutes',
+        'task_name': 'Get ready',
+        'reminders': '06:55 AM'
         }
     ]
-
-# Convert specific keys to datetime objects
-for task in default_task_dict:
-    for key in COLUMN_KEYS:
-        if key in ["from_time", "to_time"]:
-            task[key] = convert_to_datetime(task[key])
-
-
-# Now default_task_dict contains datetime objects for from_time and to_time
-
-
-class ColorsEn(Enum):
-    _settings_ = NoAlias
-    ROW_COLOR = "#DDEAF0"
-    ALT_ROW_COLOR = "#C4D0D5"
-    SUBTASK_ROW_COLOR = "#364135"
-    HEADERS_COLOR = "#36436A"
-    HEADERS_FONT_COLOR = "#DDEAF3"
-    CURRENT_ROW_COLOR = "#D7B1D9"
-
-
-class NumericEn(Enum):
-    _settings_ = NoAlias
-
-    FONT_SIZE = 11
-    SUBTASK_FONT_SIZE = 11
-    HEADERS_FONT_SIZE = 15
-    ROW_HEIGHT = 40
-    SUBTASK_HEIGHT = 25
-    REMINDER_LEAD_TIME = 5
-
-
-class BoolEn(Enum):
-    _settings_ = NoAlias
-
-    REMINDERS = True
-    EXIT_CONFIRM = True
-    AUTO_ROW_HEIGHT = False
-    AUTO_FONT = False
 
 
 def resource_path(relative_path):
@@ -95,3 +71,33 @@ BUTTON_ICON_PATHS = {
     'Exit': resource_path('assets/buttons_icons/exit_icon.png'),
     'Minimize to Tray': resource_path('assets/buttons_icons/minimize_to_tray.png'),
     }
+
+
+class ColorsEn(Enum):
+    _settings_ = NoAlias
+    ROW_COLOR = "#DDEAF0"
+    ALT_ROW_COLOR = "#C4D0D5"
+    SUBTASK_ROW_COLOR = "#364135"
+    HEADERS_COLOR = "#36436A"
+    HEADERS_FONT_COLOR = "#DDEAF3"
+    CURRENT_ROW_COLOR = "#D7B1D9"
+
+
+class NumericEn(Enum):
+    _settings_ = NoAlias
+
+    FONT_SIZE = 11
+    SUBTASK_FONT_SIZE = 11
+    HEADERS_FONT_SIZE = 15
+    ROW_HEIGHT = 40
+    SUBTASK_HEIGHT = 25
+    REMINDER_LEAD_TIME = 5
+
+
+class BoolEn(Enum):
+    _settings_ = NoAlias
+
+    REMINDERS = True
+    EXIT_CONFIRM = True
+    AUTO_ROW_HEIGHT = False
+    AUTO_FONT = False

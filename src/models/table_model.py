@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 
+from PyQt6 import QtCore
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 
 from src.models.app_data import AppData
@@ -22,6 +23,17 @@ class TableModel(QAbstractItemModel):
             self.app_data.close()  # Close the database connection on failure
             raise  # Re-raise the exception to signal the failure
 
+    def add_new_task(self):
+        logging.debug(f" 'Adding new task': ''")
+        new_data = {
+            'from_time': '12:01 AM', 'to_time': '07:00 AM', 'duration': '419 Minutes',
+            'task_name': 'Wake up', 'reminders': ''
+            }
+        new_row_index = len(self._data)  # Calculate the position of the new row
+        self.beginInsertRows(QModelIndex(), new_row_index, new_row_index)
+        self._data.append(new_data)  # Add the new row to your data storage
+        self.endInsertRows()
+
     def save_to_db_in_model(self):
         """Save the modified data back to the database."""
         logging.debug("Saving data in db file")
@@ -34,7 +46,7 @@ class TableModel(QAbstractItemModel):
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """
-        This method is called by the view to retrieve the data for a given index. The role parameter specifies what kind of data is being requested (e.g., display data, tooltip data).
+        This method is called by the view to retrieve the data for a given index. The role parameter specifies what kind of data is being requested (e.g., display data, tooltip data). It doesn't change data.
 
         """
 
@@ -44,10 +56,14 @@ class TableModel(QAbstractItemModel):
         row_data = self._data[index.row()]
         column_key = self.column_keys[index.column()]
 
-        # If the column is a datetime, format it as a string
-        if column_key in ["from_time", "to_time"] and isinstance(row_data[column_key], datetime):
-            format_str = "%H:%M %p"
-            return row_data[column_key].strftime(format_str)
+        # Check if the column is either 'start_time' or 'end_time'
+        if column_key in ["from_time", "to_time"]:
+            datetime_value = row_data.get(column_key, None)
+            if datetime_value:
+                returning_string = datetime_value.strftime("%I:%M %p")
+                return returning_string
+            else:
+                return None
 
         return row_data.get(column_key, None)
 
@@ -61,21 +77,33 @@ class TableModel(QAbstractItemModel):
         row = index.row()
         column_key = self.column_keys[index.column()]
 
-        # Update the specific field in the row data
-        try:
-            # Parse datetime fields from string
-            if column_key in ["from_time", "to_time"]:
-                format_str = "%I:%M %p, %Y-%m-%d"
-                value = datetime.strptime(F'{value}, 2023-01-01', format_str)
+        if column_key in ["from_time", "to_time"]:
+            value = self.parse_datetime(value)
 
+        if value is None:
+            return False
+
+        return self.update_and_notify(index, row, column_key, value, role)
+
+    def parse_datetime(self, value):
+        """Parse datetime fields from string."""
+        try:
+            format_str = "%I:%M %p, %Y-%m-%d"
+            return datetime.strptime(f'{value}, 2023-01-01', format_str)
+        except Exception as e:
+            logging.error(f"Exception in parseDateTime: {type(e)} - {e}")
+            return None
+
+    def update_and_notify(self, index, row, column_key, value, role):
+        """Update the data model and emit necessary signals."""
+        try:
             self._data[row][column_key] = value
             self.dataChanged.emit(index, index, [role])
-            logging.debug(f"'setData': value '{value}' set at row:{row} and column_key:'{column_key}'.")
+            logging.debug(f"'setData': value '{value}' set at row:{row}, column_key:'{column_key}'.")
             logging.debug(f"'setData': dataChanged signal emitted.")
             return True
-
         except Exception as e:
-            logging.error(f"Exception type: {type(e)} in setData (Error Description: {e})")
+            logging.error(f"Exception in updateDataAndNotify: {type(e)} - {e}")
             return False
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
@@ -111,4 +139,3 @@ class TableModel(QAbstractItemModel):
 
     def columnCount(self, parent=QModelIndex()):
         return len(self.column_keys) if not parent.isValid() else 0
-

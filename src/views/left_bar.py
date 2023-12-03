@@ -138,7 +138,7 @@ class LeftBar(QObject):
         return button
 
     def emit_signal(self, action):
-        logging.debug(f"Emitting {action} signal from LeftBar.")
+        logging.debug(f"Emitting '{action}' signal from LeftBar.")
         self.left_bar_signals.emit(action)
 
     def set_button_icon(self, button, action_name):
