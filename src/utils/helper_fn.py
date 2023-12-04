@@ -20,6 +20,7 @@ def get_environment_cls(limit_logs=True, caller=None):
 def dict_factory(cursor, row):
     """
     Convert a database row to a dictionary using two for loops for clarity.
+    This is called whenever rows are fetched after executing 'SELECT' query.
 
     Parameters:
     cursor (Cursor): A database cursor object that provides metadata about the columns.
@@ -52,13 +53,13 @@ def dict_factory(cursor, row):
         column_name_value_dict[column_name] = column_value
 
     # Return the dictionary containing column names and their corresponding values.
-    logging.debug(f"Returning 'column_name_value_dict': '{column_name_value_dict}'")
     return column_name_value_dict
 
 
 def string_to_datetime(input_string):
     format_of_string = "%Y-%m-%d %H:%M:%S"
     return datetime.strptime(input_string, format_of_string)
+
 
 def resource_path(relative_path):
     """Get the absolute path to the resource, works for dev and for PyInstaller"""
@@ -69,3 +70,25 @@ def resource_path(relative_path):
         # Running in a normal Python environment, return base path of file that calls the method
         base_path = os.path.abspath('../src')
     return os.path.join(base_path, relative_path)
+
+
+def calculate_duration(from_time, to_time):
+    """Calculate duration between from_time and to_time in minutes."""
+    if from_time and to_time:
+        duration = (to_time - from_time).total_seconds() / 60
+        return int(duration)  # Return duration as integer minutes
+    return 0
+
+
+def calculate_to_time(from_time, duration):
+    """Calculate to_time based on from_time and duration."""
+    if from_time and duration:
+        to_time = from_time + timedelta(minutes=duration)
+        return to_time
+    return from_time
+
+def calculate_from_time(to_time, duration):
+    if to_time and duration:
+        from_time = to_time - timedelta(minutes=duration)
+        return from_time
+    return to_time

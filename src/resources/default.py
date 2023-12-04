@@ -22,24 +22,24 @@ def convert_to_datetime(time_str):
         return None
 
 
-default_tasks = [
+default_tasks = (
     {
         'id': 1,
-        'from_time': convert_to_datetime('12:01 AM'),
+        'from_time': convert_to_datetime('12:00 AM'),
         'to_time': convert_to_datetime('07:00 AM'),
-        'duration': '419 Minutes',
+        'duration': 420,
         'task_name': 'Wake up',
-        'reminders': ''
+        'reminders': convert_to_datetime('12:00 AM')
         },
     {
         'id': 2,
         'from_time': convert_to_datetime('07:00 AM'),
         'to_time': convert_to_datetime('07:30 AM'),
-        'duration': '30 Minutes',
+        'duration': 30,
         'task_name': 'Get ready',
-        'reminders': '06:55 AM'
+        'reminders': convert_to_datetime('06:55 AM')
         }
-    ]
+    )
 
 
 def resource_path(relative_path):

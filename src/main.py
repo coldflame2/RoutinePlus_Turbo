@@ -120,6 +120,7 @@ def main():
         main_app.main_frame.show()
 
         logging.debug("main function loop starting.")
+
         sys.exit(main_app.exec())
     except Exception as e:
         print(f"An error occurred: {e}")
