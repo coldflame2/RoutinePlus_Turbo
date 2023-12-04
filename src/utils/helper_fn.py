@@ -56,6 +56,19 @@ def dict_factory(cursor, row):
     return column_name_value_dict
 
 
+def strip_text(time_str):
+    """
+    Strip the word 'minutes' from a string and return the numerical part.
+
+    :param time_str: A string containing a number and 'minutes', e.g., '10 minutes'.
+    :return: The numerical part of the string as an integer.
+    """
+    # Split the string by spaces and take the first part (assuming the format is always 'number minutes')
+    number_str = time_str.split()[0]
+    logging.debug(f"input string:'{time_str}'. returning value:'{number_str}'.")
+    return int(number_str)
+
+
 def string_to_datetime(input_string):
     format_of_string = "%Y-%m-%d %H:%M:%S"
     return datetime.strptime(input_string, format_of_string)
