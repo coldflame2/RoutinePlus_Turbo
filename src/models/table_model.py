@@ -17,19 +17,19 @@ class TableModel(QAbstractItemModel):
         self.column_keys = COLUMN_KEYS  # Keys (str) used internally
 
         self.app_data = AppData()
+
         try:
-            self._data = self.app_data.get_all_entries()
-            logging.debug(f"Data in TableModel Constructor: '{self._data}'")
+            self._data = list(self.app_data.get_all_entries())
+
         except Exception as e:
             logging.error(f"Exception in TableModel init: {e}")
             self.app_data.close()  # Close the database connection on failure
             raise  # Re-raise the exception to signal the failure
 
-    def add_new_task(self):
-        logging.debug("Adding new task")
-
-        # Initialize the new_id variable
-        new_id = 1
+    def get_max_id(self):
+        """
+        This method is to make sure the ID used is always unique (by keeping it the max value)
+        """
 
         # Check if there are existing tasks in self._data
         if self._data:
@@ -37,38 +37,53 @@ class TableModel(QAbstractItemModel):
             max_id = 0
 
             # Iterate through each task in self._data to find the maximum ID
-            for task in self._data:
+            for task in self._data[:-1]:  # slicing to exclude the last item
                 # Update max_id if the current task's ID is greater
                 if task['id'] > max_id:
                     max_id = task['id']
 
             # Set new_id to be one greater than the maximum ID found
-            new_id = max_id + 1
+            new_max_id = max_id + 1
+            return new_max_id
 
-        # Calculate the new task's times based on the last task
-        index_to_insert = len(self._data)
-        row_above = index_to_insert - 1
+        else:
+            # If no data, return ID as 1
+            return
 
-        last_end = self._data[row_above]['to_time'] if index_to_insert > 0 else None
-        new_end = last_end + timedelta(minutes=10) if last_end else None
-        reminder = last_end - timedelta(minutes=5)
+    def get_total_rows(self):
+        logging.debug(f"Getting and returning total rows:'{len(self._data)}'")
+        return len(self._data)
 
-        # New task data
-        data_to_insert = {
-            'id': new_id,
-            'from_time': last_end,
-            'to_time': new_end,
-            'duration': 10,
-            'task_name': 'New Task',  # Change as needed
-            'reminders': reminder
-            }
+    def get_entry_from_row(self, row_index, column_key):
+        value = self._data[row_index][column_key] if row_index >= 0 else None
+        return value
 
-        # Insert the new row
-        self.beginInsertRows(QModelIndex(), index_to_insert, index_to_insert)
-        self._data.append(data_to_insert)
+    def insert_new_row(self, index, data_to_insert):
+        self.beginInsertRows(QModelIndex(), index, index)
+        self._data.insert(index, data_to_insert)
         self.endInsertRows()
 
-    def save_to_db_in_model(self):
+
+    def update_value(self, row, new_from, new_duration):
+
+        logging.debug(f"updating value of row:'{row}.")
+        if 0 <= row < self.rowCount() and 0 <= self.columnCount():
+            logging.debug(f"Updating Values and emitting dataChanged")
+
+            # Update the value in your data structure
+            self._data[row]['from_time'] = new_from
+            self._data[row]['duration'] = new_duration
+
+            # Notify views that the data has been changed
+            from_col = self.createIndex(row, 0)
+            dur_col = self.createIndex(row, 2)
+            self.dataChanged.emit(from_col, from_col, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+
+            self.dataChanged.emit(dur_col, dur_col, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+
+
+
+    def call_save_all(self):
         """Save the modified data back to the database."""
         logging.debug("Saving data in db file")
         self.app_data.save_all(self._data)
@@ -81,7 +96,6 @@ class TableModel(QAbstractItemModel):
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """
         This method is called by the view to retrieve the data for a given index. The role parameter specifies what kind of data is being requested (e.g., display data, tooltip data). It doesn't change data.
-
         """
 
         if not index.isValid() or role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
@@ -471,6 +485,14 @@ class TableModel(QAbstractItemModel):
         return None
 
     def flags(self, index):
+        if index.row() == 0 and index.column() == 0:
+            return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+
+        total_rows = len(self._data)
+
+        if index.row() == total_rows-1 and index.column() == 1:
+            return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         return super().flags(index) | Qt.ItemFlag.ItemIsEditable

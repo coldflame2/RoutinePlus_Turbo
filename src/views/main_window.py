@@ -17,7 +17,7 @@ from src.views.left_bar import LeftBar
 from src.views.ribbon import RibbonWidget
 
 
-class MainFrame(QMainWindow):
+class MainWindow(QMainWindow):
     close_requested_signal = pyqtSignal(str)
     main_frame_signal_after_left_bar = pyqtSignal(str)
 
@@ -30,13 +30,9 @@ class MainFrame(QMainWindow):
         self.controller = controller
 
         self.get_geometry_and_state()  # Settings, geometry, window state
-
-        self._instantiate_components()  # tableview, ribbon, left bar, splitter, title bar
-
+        self._instantiate_components()  # ribbon, left bar, splitter, title bar
         self._container_layout()
-
         self._splitter_layout()
-
         self._configure_ui_elements()
         self._setup_win_properties()
 

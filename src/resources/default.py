@@ -32,10 +32,10 @@ default_tasks = (
         'reminders': convert_to_datetime('12:00 AM')
         },
     {
-        'id': 2,
+        'id': 999,
         'from_time': convert_to_datetime('07:00 AM'),
-        'to_time': convert_to_datetime('07:30 AM'),
-        'duration': 30,
+        'to_time': convert_to_datetime('12:00 AM'),
+        'duration': 1020,
         'task_name': 'Get ready',
         'reminders': convert_to_datetime('06:55 AM')
         }

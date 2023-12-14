@@ -68,6 +68,9 @@ if environment == 'development':
     print(f"\nAPPLICATION STARTED IN '{environment}' environment.")
     logging.debug("App_env: Development")
 
+elif environment is None:
+    environment_cls = DevelopmentEnvironment
+    logging.debug(f"Environment was found None. So setting it to Development")
 else:
     environment_cls = ProductionEnvironment
 

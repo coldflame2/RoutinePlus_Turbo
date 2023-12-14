@@ -1,3 +1,4 @@
+import inspect
 import re
 import sys
 import os
@@ -9,6 +10,27 @@ from PyQt6.QtCore import QTime
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
 from src.dev.environment import environment_cls
+
+
+def print_stack_trace():
+    stack = inspect.stack()
+
+    for i, level in enumerate(stack):
+        frame = level.frame
+        index = level.index
+        filename = level.filename
+        lineno = level.lineno
+        function = level.function
+        code_context = level.code_context[0].strip() if level.code_context else "No context"
+        local_vars = frame.f_locals
+
+        logging.debug(f"Step {i+1}: line:{lineno}")
+        logging.debug(f"File: {filename}")
+        logging.debug(f"Line of code: '{code_context}'")
+        logging.debug(f"Method/function: '{function}'")
+        logging.debug(f"...")
+        # Uncomment below line to log local variables at each frame (can be verbose)
+        # logging.debug(f"  Locals: {local_vars}\n")
 
 
 def get_environment_cls(limit_logs=True, caller=None):
@@ -99,6 +121,7 @@ def calculate_to_time(from_time, duration):
         to_time = from_time + timedelta(minutes=duration)
         return to_time
     return from_time
+
 
 def calculate_from_time(to_time, duration):
     if to_time and duration:

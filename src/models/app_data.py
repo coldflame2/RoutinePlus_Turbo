@@ -84,7 +84,7 @@ class AppData:
                 self.insert_row_data(each_task_dict)
             return default.default_tasks
 
-        logging.debug(f"Rows data fetched from SQLite:{rows_data}. Converting them to datetime objects.")
+        logging.debug(f"Rows data fetched from SQLite. Converting them to datetime objects.")
 
         existing_data_formatted = []  # to store formatted data after converting string from database to datetime
         for each_row_data in rows_data:
@@ -93,7 +93,7 @@ class AppData:
             each_row_data['reminders'] = helper_fn.string_to_datetime(each_row_data['reminders'])
 
             existing_data_formatted.append(each_row_data)
-        logging.debug(f"Data found in database file. Returning existing data: {existing_data_formatted}")
+        logging.debug(f"Data found in database file. Returning existing data.")
         return existing_data_formatted
 
     def save_all(self, data_from_model):

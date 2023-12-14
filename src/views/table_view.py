@@ -20,6 +20,9 @@ class TableView(QTableView):
     def setModel(self, model):
         super().setModel(model)
         self.set_properties()
+        self.set_triggers()
+        self.set_height()
+        self.apply_styles()
 
     def set_properties(self):
         # Additional settings for transparent background can be here
@@ -29,11 +32,10 @@ class TableView(QTableView):
         self.viewport().setAutoFillBackground(True)
 
         self.horizontalHeader().setVisible(True)
-        self.verticalHeader().setVisible(False)  # if you want vertical headers as well
+        self.verticalHeader().setVisible(False)
 
-        self.set_triggers()
-        self.set_height()
-        self.apply_styles()
+        self.horizontalHeader().setStretchLastSection(True)
+        self.horizontalHeader().setHighlightSections(False)
 
     def set_triggers(self):
         try:
