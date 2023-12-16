@@ -1,27 +1,32 @@
-RoutinePlus_Turbo
+src
+├── main.py
 ├── controllers
-│   └── data_controller.py
-├── data
-│   └── app_data.py
+│   ├── controller.py
+│   ├── task_services.py
+│   └── time_calculator.py
 ├── dev
-│   ├── env_config.py
-│   └── get_tree_structure.py
+│   ├── build.py
+│   ├── environment.py
+│   ├── get_tree_structure.py
+│   └── test_database_conn.py
+├── hooks
+│   └── hook-plyer.py
 ├── models
+│   ├── app_data.py
 │   └── table_model.py
 ├── resources
-├── styles
-│   ├── all_styles.py
-│   ├── SettingsUIStyles.py
-│   └── default.py
+│   ├── default.py
+│   ├── icons (Directory)
+│   └── styles (Directory)
 ├── utils
 │   ├── app_logging.py
 │   ├── helper_fn.py
 │   └── singleton.py
 └── views
-    ├── appearance
-    │   └── table_styles.py
-    ├── table_view.py
+    ├── delegates
+    │   └── table_delegate.py
     ├── left_bar.py
-    ├── main_interface.py
-    ├── main_frame.py
-    └── ribbon.py
+    ├── main_window.py
+    ├── ribbon.py
+    ├── table_view.py
+    └── title_bar.py

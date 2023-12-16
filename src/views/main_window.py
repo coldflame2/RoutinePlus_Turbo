@@ -197,6 +197,10 @@ class MainWindow(QMainWindow):
             print(f" Exception '{e}' while restoring state.")
             logging.error(f" Exception '{e}' while restoring state.")
 
+    def resizeEvent(self, a0):
+        self.set_win_state_and_geometry()
+        self.table_view.adjust_col_widths()
+        logging.debug(f" MainWin resized. Saving geometry and state.")
 
 class HoverSplitter(QSplitter):
     def createHandle(self) -> QSplitterHandle:

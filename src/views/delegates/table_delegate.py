@@ -44,7 +44,7 @@ class TableDelegate(QStyledItemDelegate):
 
         painter.restore()  # Restore the painter's state
 
-        # Remove the focus border if necessary
+        # Remove the dotted border around the focused item
         if option.state & QStyle.StateFlag.State_HasFocus:
             option.state ^= QStyle.StateFlag.State_HasFocus
             return

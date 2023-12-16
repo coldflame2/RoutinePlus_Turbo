@@ -137,10 +137,10 @@ def main():
         main_app.aboutToQuit.connect(lambda: app_about_to_quit(model))
 
         main_app.main_window.show()
-
         logging.debug("main function loop starting.")
 
         sys.exit(main_app.exec())
+        
     except Exception as e:
         print(f"An error occurred: {e}")
         logging.error(f"Exception type:{type(e)} in main(). (Description{e}.")

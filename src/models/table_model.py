@@ -1,13 +1,10 @@
 import logging
-from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
-from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from src.models.app_data import AppData
 from src.resources.default import COLUMN_KEYS, VISIBLE_HEADERS
-from src.utils import helper_fn
 
 
 class TableModel(QAbstractItemModel):
@@ -47,10 +44,12 @@ class TableModel(QAbstractItemModel):
 
         self.endInsertRows()
 
-    def set_row_data(self, row,
-                     new_from=None, new_to=None,
-                     new_duration=None, new_type=None,
-                     new_task_sequence=None):
+    def set_row_data(
+            self, row,
+            new_from=None, new_to=None,
+            new_duration=None, new_type=None,
+            new_task_sequence=None
+    ):
 
         logging.debug(f"Updating value/s of row: '{row}'.")
 
@@ -141,7 +140,8 @@ class TableModel(QAbstractItemModel):
             datetime_value = row_data.get(column_key, None)
             if datetime_value:
                 try:
-                    return_datetime_string = datetime_value.strftime("%I:%M %p")  # Datetime is converted to string for view
+                    return_datetime_string = datetime_value.strftime(
+                        "%I:%M %p")  # Datetime is converted to string for view
                     return return_datetime_string
 
                 except Exception as e:

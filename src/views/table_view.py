@@ -2,7 +2,7 @@ import logging
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-    QAbstractItemView, QTableView)
+    QAbstractItemView, QTableView, QHeaderView)
 
 from src.resources.styles import table_qss
 from src.views.delegates.table_delegate import TableDelegate
@@ -25,6 +25,7 @@ class TableView(QTableView):
         self.set_triggers()
         self.set_height()
         self.apply_styles()
+        self.adjust_col_widths()
 
     def set_properties(self):
         # Additional settings for transparent background can be here
@@ -36,8 +37,6 @@ class TableView(QTableView):
         self.horizontalHeader().setVisible(True)
         self.verticalHeader().setVisible(False)
 
-        self.horizontalHeader().setStretchLastSection(True)
-        self.horizontalHeader().setHighlightSections(False)
 
     def set_triggers(self):
         try:
@@ -53,3 +52,21 @@ class TableView(QTableView):
 
     def apply_styles(self):
         self.setStyleSheet(table_qss.TABLE_STYLES)
+    
+    def adjust_col_widths(self):
+        # Resize first three columns to fit their content and add extra space
+        for column in range(3):
+            self.resizeColumnToContents(column)
+            current_width = self.columnWidth(column)
+            self.setColumnWidth(column, current_width + 60)
+
+        # Set the fourth column to stretch and fill the available space
+        header = self.horizontalHeader()
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+
+        # Resize the last column to its content and add extra space
+        reminder_col = 4
+        self.resizeColumnToContents(reminder_col)
+        current_width = self.columnWidth(reminder_col)
+        self.setColumnWidth(reminder_col, current_width + 60)
+        
