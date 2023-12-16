@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 
 from PyQt6.QtGui import QColor
-from PyQt6.QtCore import QTime
+from PyQt6.QtCore import QRect, QTime
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
 from src.dev.environment import environment_cls
@@ -24,7 +24,7 @@ def print_stack_trace():
         code_context = level.code_context[0].strip() if level.code_context else "No context"
         local_vars = frame.f_locals
 
-        logging.debug(f"Step {i+1}: line:{lineno}")
+        logging.debug(f"Step {i + 1}: line:{lineno}")
         logging.debug(f"File: {filename}")
         logging.debug(f"Line of code: '{code_context}'")
         logging.debug(f"Method/function: '{function}'")
@@ -129,3 +129,12 @@ def calculate_from_time(to_time, duration):
         return from_time
     return to_time
 
+
+def add_padding(rect, left, top, right, bottom):
+    # Shrink the rect by 'padding' on all sides
+    return QRect(
+        rect.left() + left,
+        rect.top() + top,
+        rect.width() - left - right,
+        rect.height() - top - bottom
+        )
