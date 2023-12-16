@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QAbstractItemView, QTableView)
 
 from src.resources.styles import table_qss
-from src.views.delegates.spacing_delegate import SpacingDelegate
+from src.views.delegates.table_delegate import TableDelegate
 
 
 class TableView(QTableView):
@@ -14,11 +14,13 @@ class TableView(QTableView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         logging.debug(f"TableView class constructor starting. Nothing in TableView constructor.")
-        spacing_delegate = SpacingDelegate()
-        self.setItemDelegate(spacing_delegate)
 
     def setModel(self, model):
         super().setModel(model)
+
+        table_delegate = TableDelegate()
+        self.setItemDelegate(table_delegate)
+
         self.set_properties()
         self.set_triggers()
         self.set_height()

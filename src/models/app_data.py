@@ -7,28 +7,19 @@ from src.utils import helper_fn
 
 
 class AppData:
-    instance_count_data = 0
 
     def __init__(self):
-        logging.debug(f"AppData class constructor starting.")
-        self.make_directories()
+        self.create_dirs()
         self.conn = None
         self.connect()
         self.create_table()
 
-        logging.debug(f"AppData class constructor successfully initialized.")
-
-    def make_directories(self):
+    def create_dirs(self):
         env_config = helper_fn.get_environment_cls(False, caller='AppData')
-        self.data_folder_path = os.path.join(env_config.APP_FOLDER_PATH, env_config.DATA_FOLDER_NAME)
-        os.makedirs(self.data_folder_path, exist_ok=True)
-        self.data_file_path = os.path.join(self.data_folder_path, env_config.DATA_FILE_NAME)
-
-        self.backup_folder = os.path.join(self.data_folder_path, env_config.BACKUP_FOLDER_NAME)
-        os.makedirs(self.backup_folder, exist_ok=True)
+        self.data_file_path = os.path.join(env_config.DATA_FOLDER_PATH, f'{env_config.DATA_FILE_NAME}.db')
+        self.backup_folder_path = env_config.BACKUP_FOLDER_PATH
 
     def connect(self):
-        """Connect to the SQLite database."""
         try:
             self.conn = sqlite3.connect(self.data_file_path)
 
@@ -46,15 +37,17 @@ class AppData:
             logging.error(f"Failed to connect to the database. Error: {e}")
 
     def create_table(self):
-        """Create the 'daily_routine' table if it doesn't exist."""
+        logging.debug("Creating the 'daily_routine' table if it doesn't exist.")
         create_table_query = """
         CREATE TABLE IF NOT EXISTS daily_routine (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             from_time DATETIME,
             to_time DATETIME,
             duration INTEGER,
             task_name TEXT,
-            reminders DATETIME
+            reminders DATETIME,
+            type TEXT,
+            task_sequence INTEGER
         )
         """
         self.conn.execute(create_table_query)
@@ -62,109 +55,72 @@ class AppData:
 
     def get_all_entries(self):  # Called in TableModel and set to _data variable
         """
-        Retrieve all entries from the 'daily_routine' table.
-
-        :Return:
-        All data in a list of dictionaries.
+        Retrieve all entries from the 'daily_routine' table and return them as a list of dictionaries.
         """
         logging.debug(f"Fetching all entries from the SQLite database.")
 
-        select_query = "SELECT * FROM daily_routine"
+        select_query = "SELECT * FROM daily_routine ORDER BY task_sequence ASC"
         cursor = self.conn.execute(select_query)
 
-        try:
-            rows_data = cursor.fetchall()  # List of dictionaries. Data type of 'Value' for each pair fetched from SQLite as string.
-        except Exception as e:
-            logging.error(f"Error fetching data: {type(e)}. {e}")
-            return []  # Called in TableModel
-
-        if len(rows_data) == 0:
-            logging.debug(f"No data found in database file. Inserting default task: {default.default_tasks}")
+        if len(cursor.fetchall()) == 0:
+            logging.debug(f"No data found in database file. Inserting default tasks from defaults.")
             for each_task_dict in default.default_tasks:
-                self.insert_row_data(each_task_dict)
-            return default.default_tasks
+                self.insert_new_row(each_task_dict)
+            cursor.close()
 
         logging.debug(f"Rows data fetched from SQLite. Converting them to datetime objects.")
 
-        existing_data_formatted = []  # to store formatted data after converting string from database to datetime
-        for each_row_data in rows_data:
+        cursor = self.conn.execute(select_query)
+
+        data_dt_format = []  # to store formatted data after converting string from database to datetime
+        for each_row_data in cursor.fetchall():
             each_row_data['from_time'] = helper_fn.string_to_datetime(each_row_data['from_time'])
             each_row_data['to_time'] = helper_fn.string_to_datetime(each_row_data['to_time'])
             each_row_data['reminders'] = helper_fn.string_to_datetime(each_row_data['reminders'])
+            data_dt_format.append(each_row_data)
 
-            existing_data_formatted.append(each_row_data)
-        logging.debug(f"Data found in database file. Returning existing data.")
-        return existing_data_formatted
+        return data_dt_format
 
-    def save_all(self, data_from_model):
-        """ Update or insert entries in the database based on provided data. """
-        logging.debug(f"Saving entire data from model to database.")
-
-        try:
-            row = 0  # Only for logging
-            for each_row_data in data_from_model:
-                logging.debug(f"---Data in row {row} from the model:'{each_row_data}'")
-
-                if self.does_row_exist(each_row_data['id']):  # Check if record exists by checking the unique ID
-                    logging.debug(f"Same ID found, thus the row exists already. Updating the row with the new data.")
-
-                    try:
-                        self.update_row(each_row_data)  # Update the row with the data
-
-                    except Exception as e:
-                        logging.error(f"Exception type:{type(e)} when updating a row. (Error Description:{e}")
-
-                else:
-                    logging.debug(f"New row. Inserting row data.")
-
-                    try:
-                        self.insert_row_data(each_row_data)  # Insert the data in the row
-
-                    except Exception as e:
-                        logging.error(f"Exception type:{type(e)} when inserting row data. (Error Description:{e}")
-
-                row += 1  # Only for logging
-
-        except Exception as e:
-            logging.error(f" Exception type:{type(e)} while saving (Error Description:{e}")
-
-    def does_row_exist(self, record_id):
-        """ Check if a record exists in the database.
-
-        This query selects a constant value (1) from the daily_routine table but only for the row where the id column matches the record_id passed to the method.
-
+    def insert_new_row(self, row_data):
+        logging.debug(f"Inserting new task in the database.")
+        insert_query = """
+        INSERT INTO daily_routine (from_time, to_time, duration, task_name, reminders, type, task_sequence)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """
+        params = (row_data['from_time'], row_data['to_time'], row_data['duration'],
+                  row_data['task_name'], row_data['reminders'], row_data['type'],
+                  row_data['task_sequence'])
 
-        query = "SELECT 1 FROM daily_routine WHERE id = ?"
-        cursor = self.conn.execute(query, (record_id,))  # the trailing comma is necessary to make it a tuple even with a single element.
-        return cursor.fetchone() is not None
+        cursor = self.conn.execute(insert_query, params)
 
-    def update_row(self, row_data):
-        logging.debug(f"Updating data in a row in the SQLite file. Input type:{type(row_data)}.")
+        # Fetch the last inserted row ID
+        inserted_row_id = cursor.lastrowid
 
+        # Optionally, you can log the inserted row ID
+        logging.debug(f"Inserted new task with ID: {inserted_row_id}")
+
+        return inserted_row_id
+
+    def update_sqlite_data(self, task_data):
+        logging.debug(f"Updating task in the database.")
         update_query = """
         UPDATE daily_routine
-        SET from_time = ?, to_time = ?, duration = ?, task_name = ?, reminders = ?
+        SET from_time = ?, to_time = ?, duration = ?, task_name = ?, reminders = ?, type = ?, task_sequence = ?
         WHERE id = ?
         """
+        params = (task_data['from_time'], task_data['to_time'], task_data['duration'],
+                  task_data['task_name'], task_data['reminders'], task_data['type'],
+                  task_data['task_sequence'], task_data['id'])
+        self.conn.execute(update_query, params)
 
-        self.conn.execute(
-            update_query, (
-                row_data['from_time'], row_data['to_time'], row_data['duration'],
-                row_data['task_name'], row_data['reminders'],
-                row_data['id'])
-            )
-
+    def commit_sqlite_all(self):
+        logging.debug(f"Committing all changes to the database.")
         self.conn.commit()
 
-    def insert_row_data(self, row_data):
-        logging.debug(f"Inserting data in a row in the SQLite file. Input type:{type(row_data)}.")
-
-        insert_query = """
-        INSERT INTO daily_routine (id, from_time, to_time, duration, task_name, reminders)
-        VALUES (:id, :from_time, :to_time, :duration, :task_name, :reminders)
-        """
-        self.conn.execute(insert_query, row_data)
+    def delete_task(self, task_id):
+        logging.debug(f"Deleting task from the database.")
+        delete_query = "DELETE FROM daily_routine WHERE id = ?"
+        self.conn.execute(delete_query, (task_id,))
         self.conn.commit()
 
     def close(self):
@@ -174,3 +130,19 @@ class AppData:
 
     def __del__(self):
         self.close()
+
+
+"""
+Sequence of events for AppData class analysis:
+
+1. Directories are created.
+
+2. Connection to database is established.
+
+3. Table 'daily routine' is created if it doesn't exist. (This table is created only once when the app is run for the first time.)
+
+4. Data is fetched from the database, sorted by task_sequence, and returned to the TableModel class. In case of no data, default tasks are inserted in the database by inserting default task dict to the sqlite data. In case of data, the string data in ISO format from sqlite is converted to datetime objects and returned to the TableModel class.
+
+5. When the user clicks 'Save' button, the data is either updated or inserted in the database. If the task has a valid ID, it is updated. If the task doesn't have a valid ID, it is inserted as a new task.
+
+"""

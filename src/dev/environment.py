@@ -7,52 +7,37 @@ from PyQt6.QtCore import QSettings
 
 class DefaultEnvironment:
     APP_NAME = "Routine Plus Turbo"
-    VERSION = "1.0.0 Turbo"
-    ORG_NAME = "ColdFlame Turbo"
-
+    VERSION = "1.0.0"
+    ORG_NAME = "ColdFlame"
     SYSTEM_PATH = os.getenv('APPDATA')  # Get the 'APPDATA' folder path
-
     APP_FOLDER_PATH = os.path.join(SYSTEM_PATH, f'{APP_NAME}{VERSION}')
-
-    LOG_FOLDER_NAME = f'Logs ({APP_NAME})'
-    LOG_FILE_NAME = f'Log {VERSION}.log'
-
-    DATA_FOLDER_NAME = f'Data ({APP_NAME})'
-    DATA_FILE_NAME = f'Routine {VERSION}.db'
-
-    BACKUP_FOLDER_NAME = f'Backup_({APP_NAME})'
-
+    DATA_FOLDER_PATH = os.path.join(APP_FOLDER_PATH, 'Routine Data')
+    DATA_FILE_NAME = 'routine_data'
+    BACKUP_FOLDER_PATH = os.path.join(APP_FOLDER_PATH, 'Backups')
+    LOG_FOLDER_PATH = os.path.join(APP_FOLDER_PATH, 'Logs')
+    LOG_FILE_NAME = 'routine_log.log'
     ICON_NAME = 'icon.png'
     WIN_TITLE = f"{APP_NAME}.{VERSION}"
-
     LOCAL_SERVER = f'Local Sever for {APP_NAME}.{VERSION}'
-
     SETTINGS_VALUES = QSettings(f'{APP_NAME}', 'Settings')
 
 
 class DevelopmentEnvironment(DefaultEnvironment):
-    APP_NAME = "DEV Routine Plus Turbo"
-    VERSION = "1.0.0"
+    APP_NAME = "Routine Plus Turbo"
+    VERSION = "1.0.3"
     ORG_NAME = "ColdFlame"
 
     SYSTEM_PATH = Path(os.path.expanduser("~")) / "Desktop"  # Get Desktop
-
-    APP_FOLDER_PATH = os.path.join(SYSTEM_PATH, f'{APP_NAME}{VERSION}')
-
-    LOG_FOLDER_NAME = f'Logs ({APP_NAME})'
-    LOG_FILE_NAME = f'Log {VERSION}.log'
-
-    DATA_FOLDER_NAME = f'Data ({APP_NAME})'
-    DATA_FILE_NAME = f'Routine {VERSION}.db'
-
-    BACKUP_FOLDER_NAME = f'Backup_({APP_NAME})'
-
+    APP_FOLDER_PATH = os.path.join(SYSTEM_PATH, f'{APP_NAME}{VERSION} (Dev)')
+    DATA_FOLDER_PATH = os.path.join(APP_FOLDER_PATH, 'Routine Data (Dev)')
+    DATA_FILE_NAME = 'routine_data (dev)'
+    BACKUP_FOLDER_PATH = os.path.join(APP_FOLDER_PATH, 'Backups (Dev)')
+    LOG_FOLDER_PATH = os.path.join(APP_FOLDER_PATH, 'Logs (Dev)')
+    LOG_FILE_NAME = 'routine_log (dev).log'
     ICON_NAME = 'dev_icon.png'
-    WIN_TITLE = f"{APP_NAME}.{VERSION}"
-
-    LOCAL_SERVER = f'Local Sever for {APP_NAME}.{VERSION}'
-
-    SETTINGS_VALUES = QSettings(f'{APP_NAME}', 'Settings')
+    WIN_TITLE = f"DEV {APP_NAME}.{VERSION}"
+    LOCAL_SERVER = f'Local DEV Sever for {APP_NAME}.{VERSION}'
+    SETTINGS_VALUES = QSettings(f'DEV {APP_NAME}', 'DEV_Settings')
 
 
 class ProductionEnvironment(DefaultEnvironment):
@@ -65,14 +50,28 @@ environment = os.getenv('APP_ENV')  # Get the environment using the key 'APP_ENV
 # Set the appropriate environment_cls class based on the environment variable
 if environment == 'development':
     environment_cls = DevelopmentEnvironment
+    print(f"\nEnvironment: Development. Creating necessary folders in {environment_cls.APP_FOLDER_PATH}.")
+    os.makedirs(environment_cls.APP_FOLDER_PATH, exist_ok=True)
+    os.makedirs(environment_cls.DATA_FOLDER_PATH, exist_ok=True)
+    os.makedirs(environment_cls.LOG_FOLDER_PATH, exist_ok=True)
+    os.makedirs(environment_cls.BACKUP_FOLDER_PATH, exist_ok=True)
     print(f"\nAPPLICATION STARTED IN '{environment}' environment.")
-    logging.debug("App_env: Development")
 
 elif environment is None:
     environment_cls = DevelopmentEnvironment
-    logging.debug(f"Environment was found None. So setting it to Development")
+    print(f"\nEnvironment was None. Manually set to Development evn. Creating necessary folders in {environment_cls.APP_FOLDER_PATH}.")
+    os.makedirs(environment_cls.APP_FOLDER_PATH, exist_ok=True)
+    os.makedirs(environment_cls.DATA_FOLDER_PATH, exist_ok=True)
+    os.makedirs(environment_cls.LOG_FOLDER_PATH, exist_ok=True)
+    os.makedirs(environment_cls.BACKUP_FOLDER_PATH, exist_ok=True)
+    print(f"\nAPPLICATION STARTED IN '{environment}' environment.")
+
 else:
     environment_cls = ProductionEnvironment
+    os.makedirs(environment_cls.APP_FOLDER_PATH, exist_ok=True)
+    os.makedirs(environment_cls.DATA_FOLDER_PATH, exist_ok=True)
+    os.makedirs(environment_cls.LOG_FOLDER_PATH, exist_ok=True)
+    os.makedirs(environment_cls.BACKUP_FOLDER_PATH, exist_ok=True)
 
     logging.warning(
         f"READ: Currently in {environment} environment. "

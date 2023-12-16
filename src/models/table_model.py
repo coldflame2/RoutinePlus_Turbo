@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta
+from typing import Any, Dict, List
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QApplication, QMessageBox
@@ -19,74 +20,106 @@ class TableModel(QAbstractItemModel):
         self.app_data = AppData()
 
         try:
-            self._data = list(self.app_data.get_all_entries())
+            self._data: List[Dict[str, Any]] = list(self.app_data.get_all_entries())
 
         except Exception as e:
             logging.error(f"Exception in TableModel init: {e}")
             self.app_data.close()  # Close the database connection on failure
             raise  # Re-raise the exception to signal the failure
 
-    def get_max_id(self):
-        """
-        This method is to make sure the ID used is always unique (by keeping it the max value)
-        """
-
-        # Check if there are existing tasks in self._data
-        if self._data:
-            # Initialize max_id to a value that's lower than any expected ID (e.g., 0)
-            max_id = 0
-
-            # Iterate through each task in self._data to find the maximum ID
-            for task in self._data[:-1]:  # slicing to exclude the last item
-                # Update max_id if the current task's ID is greater
-                if task['id'] > max_id:
-                    max_id = task['id']
-
-            # Set new_id to be one greater than the maximum ID found
-            new_max_id = max_id + 1
-            return new_max_id
-
+    def get_row_data(self, row, column_key=None):
+        if column_key is None:
+            logging.debug(f"Returning entire row data for row:'{row}'")
+            return self._data[row]
         else:
-            # If no data, return ID as 1
-            return
-
-    def get_total_rows(self):
-        logging.debug(f"Getting and returning total rows:'{len(self._data)}'")
-        return len(self._data)
-
-    def get_entry_from_row(self, row_index, column_key):
-        value = self._data[row_index][column_key] if row_index >= 0 else None
-        return value
+            logging.debug(f"Returning {column_key}'s value: ('{self._data[row][column_key]}') at row index:{row}")
+            return self._data[row][column_key]
 
     def insert_new_row(self, index, data_to_insert):
         self.beginInsertRows(QModelIndex(), index, index)
-        self._data.insert(index, data_to_insert)
+
+        try:
+            self._data.insert(index, data_to_insert)  # Inset in model's database
+            self._data[index]['id'] = self.app_data.insert_new_row(data_to_insert)  # Insert in SQLite file and set ID
+
+        except Exception as e:
+            logging.error(f"Exception type:{type(e)} when inserting new row (Error Description:{e}")
+
         self.endInsertRows()
 
+    def set_row_data(self, row,
+                     new_from=None, new_to=None,
+                     new_duration=None, new_type=None,
+                     new_task_sequence=None):
 
-    def update_value(self, row, new_from, new_duration):
+        logging.debug(f"Updating value/s of row: '{row}'.")
 
-        logging.debug(f"updating value of row:'{row}.")
-        if 0 <= row < self.rowCount() and 0 <= self.columnCount():
-            logging.debug(f"Updating Values and emitting dataChanged")
+        if 0 <= row < self.rowCount():
+            changed_indices = []
 
-            # Update the value in your data structure
-            self._data[row]['from_time'] = new_from
-            self._data[row]['duration'] = new_duration
+            if new_from is not None:
+                logging.debug("Updating 'from_time'")
+                self._data[row]['from_time'] = new_from
+                from_col_index = self.createIndex(row, 0)  # Assuming 'from_time' is in column 0
+                changed_indices.append(from_col_index)
 
-            # Notify views that the data has been changed
-            from_col = self.createIndex(row, 0)
-            dur_col = self.createIndex(row, 2)
-            self.dataChanged.emit(from_col, from_col, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+            if new_to is not None:
+                logging.debug("Updating 'to_time'")
+                self._data[row]['to_time'] = new_to
+                to_col_index = self.createIndex(row, 1)
+                changed_indices.append(to_col_index)
 
-            self.dataChanged.emit(dur_col, dur_col, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+            if new_duration is not None:
+                logging.debug("Updating 'duration'")
+                self._data[row]['duration'] = new_duration
+                dur_col_index = self.createIndex(row, 1)  # Assuming 'duration' is in column 1
+                changed_indices.append(dur_col_index)
 
+            if new_type is not None:
+                logging.debug("Updating 'type'")
+                self._data[row]['type'] = new_type
+                type_col_index = self.createIndex(row, 2)
+                changed_indices.append(type_col_index)
 
+            if new_task_sequence is not None:
+                logging.debug("Updating 'task_sequence'")
+                self._data[row]['task_sequence'] = new_task_sequence
+                seq_col_index = self.createIndex(row, 2)  # Assuming 'task_sequence' is in column 2
+                changed_indices.append(seq_col_index)
 
-    def call_save_all(self):
-        """Save the modified data back to the database."""
-        logging.debug("Saving data in db file")
-        self.app_data.save_all(self._data)
+            # Notify views of data changes
+            for index in changed_indices:
+                self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+
+            logging.debug("Values updated and dataChanged emitted.")
+
+    def delete_row_and_data(self, row):
+        logging.debug(f"Deleting row: '{row}'")
+        self.beginRemoveRows(QModelIndex(), row, row)
+
+        try:
+            row_id = self._data[row]['id']  # Get the row ID before deleting
+            self._data.pop(row)  # Delete from model's database
+            self.app_data.delete_task(row_id)  # Delete from SQLite file using row ID
+
+        except Exception as e:
+            logging.error(f"Exception type:{type(e)} when deleting row (Error Description:{e}")
+            return False
+
+        self.endRemoveRows()
+        logging.debug(f"Row {row} deleted from model and SQLite database.")
+        return True
+
+    def save_to_database_file(self):
+        logging.debug(f"Looping rows in model and calling update or insert in AppData.")
+        print(self.rowCount())
+
+        for row in range(self.rowCount()):
+            row_data = self.get_row_data(row)
+            self.app_data.update_sqlite_data(row_data)
+
+        self.app_data.commit_sqlite_all()
+        logging.debug(f"Saving to database file. {self._data}")
 
     def close_database(self):
         logging.debug("Closing the database.")
@@ -104,11 +137,9 @@ class TableModel(QAbstractItemModel):
         row_data = self._data[index.row()]
         column_key = self.column_keys[index.column()]
 
-        if column_key in ["from_time", "to_time", "reminders"]:
+        if column_key in ["from_time", "to_time", "reminders"]:  # convert datetime to string for view
             datetime_value = row_data.get(column_key, None)
-
             if datetime_value:
-
                 try:
                     return_datetime_string = datetime_value.strftime("%I:%M %p")  # Datetime is converted to string for view
                     return return_datetime_string
@@ -120,8 +151,7 @@ class TableModel(QAbstractItemModel):
             else:
                 return None
 
-        if column_key in ["duration"]:
-            """Convert duration integer """
+        if column_key in ["duration"]:  # convert duration integer to string and add "minutes"
             duration_value = row_data.get(column_key, None)
             if duration_value:
                 if isinstance(duration_value, int):
@@ -132,6 +162,12 @@ class TableModel(QAbstractItemModel):
                     return None
             else:
                 return None
+
+        if column_key in ["id", "type", "task_sequence"]:
+            value = row_data.get(column_key, None)
+
+            value_str = str(value)
+            return value_str
 
         return row_data.get(column_key, None)
 
@@ -156,320 +192,6 @@ class TableModel(QAbstractItemModel):
         if column_key in ["from_time", "to_time"]:
             return self.set_and_update_fields_and_notify(value, row, column_key)
 
-    def handle_task_name_input(self, index, row, value, role):
-        task_col_key = 'task_name'
-        original_task_name = self._data[row][task_col_key]
-
-        if original_task_name == value:
-            logging.debug(f"Same value in 'Task' column. Returning without any changes.")
-            return False
-
-        else:
-            return self.set_task_name_and_notify(index, row, value, role)
-
-    def handle_duration_input(self, index, row, value, role):
-        logging.debug(f"Change in duration")
-        focus_widget = QApplication.focusWidget()
-
-        original_duration = self._data[row]['duration']
-
-        if value == "":
-            logging.debug(f"Input value is empty:'{value}'")
-            return False
-
-        try:
-            input_duration_int = helper_fn.strip_text(value)
-
-        except Exception as e:
-            logging.error(f"Exception type:{type(e)} when striping input duration string (Error Description:{e}")
-            return False
-
-        if input_duration_int == 0 or input_duration_int < 0:
-            QMessageBox.warning(focus_widget, "Can't be zero.", "The task has to be at least of one minute duration.")
-            return False
-
-        if original_duration != input_duration_int:  # If the input value is not equal to original
-            if row == (len(self._data) - 1):
-                logging.debug(f"Row edited is the last row. Index:'{row}'. Setting 'Duration' and updating 'to_time'.")
-                return self.on_duration_input_same_row(index, row, input_duration_int, role)
-
-            else:
-                logging.debug(f"Next row exists. Calling methods to update its values.")
-                return self.on_duration_input_next_row(index, row, input_duration_int, role)
-
-        else:
-            logging.debug(f"Same value in 'Duration'. Returning without any changes.")
-            return False
-
-    def on_duration_input_same_row(self, index, row, input_duration_int, role):
-
-        try:
-            original_from = self._data[row]['from_time']
-            new_to = original_from + timedelta(minutes=input_duration_int)
-
-        except Exception as e:
-            logging.error(f"Exception type:{type(e)} when updating 'from' after setting new duration (Error Description:{e}")
-            return False
-
-        try:
-            self._data[row]['duration'] = input_duration_int  # Set the value to new_duration integer
-            self._data[row]['to_time'] = new_to  # Set the 'To' value to new calculated one
-
-        except Exception as e:
-            logging.error(f"Exception type:{type(e)} when setting input duration and calculated new 'to_time.' (Error Description:{e}")
-            return False
-
-        logging.debug(f"setData in 'duration'({input_duration_int} and 'to_time' {new_to}. Emitting dataChanged signals now.")
-        self.dataChanged.emit(index, index, [role])  # Emit for 'From_time'
-
-        to_time_index = self.createIndex(row, 1)  # to_time column index = 1
-        self.dataChanged.emit(to_time_index, to_time_index, [role])  # Emit for 'to_time'
-
-        return True
-
-    def on_duration_input_next_row(self, index, row, input_duration_int, role):
-
-        focus_widget = QApplication.focusWidget()
-
-        next_row = row + 1
-        original_from_next_row = self._data[next_row]['from_time']
-        original_to_next_row = self._data[next_row]['to_time']
-        original_duration_next_row = self._data[next_row]['duration']
-
-        logging.debug(
-            f"Next row values."
-            f"start:'{original_from_next_row}'. To:{original_to_next_row}. Duration:{original_duration_next_row}"
-            )
-
-        try:
-            original_duration = self._data[row]['duration']
-            max_possible_duration = original_duration + original_duration_next_row
-
-            if input_duration_int < max_possible_duration:
-                # Duration same row
-
-                # set
-                logging.debug(f"Setting input duration ({input_duration_int}) in the same row.")
-                self._data[row]['duration'] = input_duration_int  # Set the value to new_duration integer
-
-                # Emit
-                logging.debug(f"Emitting dataChanged for Duration in the same row.")
-                self.dataChanged.emit(index, index, [role])
-
-                # "To Time" same row
-
-                # set
-                logging.debug(f"Setting new 'to_time' in the same row.")
-                original_from_same_row = self._data[row]['from_time']
-                new_to_same_row = original_from_same_row + timedelta(minutes=input_duration_int)
-                self._data[row]['to_time'] = new_to_same_row
-                logging.debug(f"new 'to_time' same row:{new_to_same_row} set.")
-
-                # Emit
-                to_time_same_row_index = self.createIndex(row, 1)
-                self.dataChanged.emit(to_time_same_row_index, to_time_same_row_index, [role])
-
-                # "From Time" next row
-
-                # set
-                logging.debug(f"Setting new 'from_time' in the next row.")
-                self._data[next_row]['from_time'] = new_to_same_row  # set same as 'to_time' of row above
-
-                # Emit
-                logging.debug(f"Emitting dataChanged for 'from_time' in the next row.")
-                new_from_next_row_index = self.createIndex(row, 0)
-                self.dataChanged.emit(new_from_next_row_index, new_from_next_row_index, [role])
-
-                # 'Duration' next row
-
-                # set
-                logging.debug(f"Setting new 'duration' in the next row.")
-                original_to_next_row = self._data[next_row]['to_time']
-                new_time_diff_next_row = (original_to_next_row - new_to_same_row)  # This is in timedelta
-                self._data[next_row]['duration'] = int(new_time_diff_next_row.total_seconds() / 60)
-
-                # Emit
-                logging.debug(f"Emitting dataChanged for 'duration' in the next row.")
-                duration_next_row_index = self.createIndex(next_row, 2)  # duration column index = 2
-                self.dataChanged.emit(duration_next_row_index, duration_next_row_index, [role])  # Emit for 'duration'
-
-                return True
-
-            else:
-                logging.warning(f"Duration cannot be more than {max_possible_duration}")
-                QMessageBox.warning(
-                    focus_widget, f"Invalid. Input less than {max_possible_duration}",
-                    "The task below has to be at least of one minute duration."
-                    f"Therefore the duration for this task cannot be more than {max_possible_duration}."
-                    )
-                return False
-
-        # Value isn't an integer
-        except ValueError:
-            QMessageBox.warning(focus_widget, "Invalid Duration", "Please input a valid number for duration.")
-            logging.error(f"Input duration value isn't a valid integer. Input: {input_duration_int}")
-            return False
-
-        except Exception as e:
-            QMessageBox.warning(focus_widget, "Unknown Exception", "Please restart.")
-            logging.error(f"Exception type:{type(e)} after input in duration. Input value: {input_duration_int}. Error:{e}")
-            return False
-
-    def set_and_update_fields_and_notify(self, value, row, column_key):
-
-        if column_key == 'duration':  # String input to Integer
-            logging.debug(f"Change in duration")
-            original_duration = self._data[row]['duration']
-
-            try:
-                input_duration_int = helper_fn.strip_text(value)
-
-            except Exception as e:
-                logging.error(f"Exception type:{type(e)} when striping input duration string (Error Description:{e}")
-                return False
-
-            if original_duration != input_duration_int:  # If the input value is not equal to original
-                duration_input_handled = self.handle_duration_input(row, input_duration_int)
-                return duration_input_handled
-
-            else:
-                logging.debug(f"Same value in 'Duration'. Returning without any changes.")
-                return False
-
-        if column_key == 'from_time':
-            logging.debug(f"Change detected in 'from_time'. Input value:'{value}'")
-            return self.handle_from_input(row, value)
-
-        if column_key == 'to_time':
-            logging.debug(f"Change detected in 'to_time'. Input value:'{value}'")
-            return self.handle_to_input(row, value)
-
-    def handle_from_input(self, row, user_input_value):
-        focus_widget = QApplication.focusWidget()
-
-        if row == 0:
-            logging.debug(f"Cannot change the starting time of the day.")
-            QMessageBox.warning(
-                focus_widget, "START time of the first task cannot be changed.",
-                "Cannot change the START time of the first task."
-                "First task always begins from midnight. "
-                )
-            return False
-
-        try:
-            input_from_dt = self.parse_datetime(user_input_value)
-            self._data[row]['from_time'] = input_from_dt
-
-            return True
-
-        # Value isn't an integer
-        except ValueError:
-            QMessageBox.warning(focus_widget, "Invalid 'START' time.", "Please input a valid START time for the task.")
-            logging.error(f"Input value isn't a valid time in format: 09:00 am/pm. Input: {user_input_value}")
-            return False
-
-        except Exception as e:
-            QMessageBox.warning(focus_widget, "Invalid Input", "Please input a valid START time for the task.")
-            logging.error(f"Exception type:{type(e)} after input in duration. Input value: {user_input_value}. Error:{e}")
-            return False
-
-    def handle_to_input(self, row, user_input_value):
-        focus_widget = QApplication.focusWidget()
-
-        try:
-            input_to_time = self.parse_datetime(user_input_value)
-            self._data[row]['to_time'] = input_to_time
-            return True
-
-        # Value isn't an integer
-        except ValueError:
-            QMessageBox.warning(focus_widget, "Invalid 'END' time.", "Please input a valid END time for the task.")
-            logging.error(f"Input value isn't a valid time in format: 09:00 am/pm. Input: {user_input_value}")
-            return False
-
-        except Exception as e:
-            QMessageBox.warning(focus_widget, "Invalid Input", "Please input a valid END time for the task.")
-            logging.error(f"Exception type:{type(e)} after input in duration. Input value: {user_input_value}. Error:{e}")
-            return False
-
-    def set_task_name_and_notify(self, index, row, value, role):
-        column_key = 'task_name'
-
-        try:
-            self._data[row][column_key] = value  # Task Name Set
-            self.dataChanged.emit(index, index, [role])
-            logging.debug(f"Emitting dataChanged signal after updating task_name at row:{row}.")
-            return True
-
-        except Exception as e:
-            logging.error(f"Exception type:{type(e)} when setting task name. Error: {e}")
-            return False
-
-    def update_other_fields(self, row, column_key):
-
-        if column_key in ['duration', 'from_time']:
-            # Update to_time
-            logging.debug(f"Change in 'Duration' or 'Start'. 'new_duration': '{new_duration}'")
-
-            new_to_time = helper_fn.calculate_to_time(from_time, duration)
-            logging.debug(f"Change in 'Duration' or 'Start'. 'new_duration': '{new_duration}'")
-
-            self._data[row]['to_time'] = new_to_time
-            to_time_index = self.index(row, self.column_keys.index('to_time'))
-            self.dataChanged.emit(to_time_index, to_time_index, [Qt.ItemDataRole.EditRole])
-
-            # Update the row below
-            if len(self._data) > row + 1:
-                from_time_row_below = self._data[row + 1]['from_time']
-                duration_row_below = helper_fn.calculate_duration(new_to_time, from_time_row_below)
-
-                if duration_row_below > 0:
-                    self._data[row + 1]['from_time'] = new_to_time
-                    self._data[row + 1]['duration'] = duration_row_below
-                    from_time_index_row_below = self.index(row + 1, self.column_keys.index('from_time'))
-                    duration_index_row_below = self.index(row + 1, self.column_keys.index('duration'))
-                    self.dataChanged.emit(from_time_index_row_below, duration_index_row_below, [Qt.ItemDataRole.EditRole])
-                else:
-                    # Revert to maximum possible duration for the current row
-                    max_duration_possible = helper_fn.calculate_duration(self._data[row]['from_time'], from_time_row_below)
-                    new_to_time_max = helper_fn.calculate_to_time(self._data[row]['from_time'], max_duration_possible)
-                    self._data[row]['to_time'] = new_to_time_max
-                    self._data[row]['duration'] = max_duration_possible
-
-                    to_time_index = self.index(row, self.column_keys.index('to_time'))
-                    duration_index = self.index(row, self.column_keys.index('duration'))
-                    self.dataChanged.emit(to_time_index, duration_index, [Qt.ItemDataRole.EditRole])
-                    logging.debug(f"Duration is in negative {duration_row_below}. Reverting to maximum possible duration.")
-
-        if column_key in ['from_time', 'to_time']:
-            # Update duration
-            pass
-            # new_duration = helper_fn.calculate_duration(from_time, to_time)
-            # logging.debug(f"Change in START or END time. new_duration would be: '{new_duration}'")
-            #
-            # self._data[row]['duration'] = new_duration  # Value Set
-            #
-            # logging.debug(f"New duration value {new_duration} set at row:{row}.")
-            #
-            # duration_index = self.index(row, self.column_keys.index('duration'))
-            # self.dataChanged.emit(duration_index, duration_index, [Qt.ItemDataRole.EditRole])
-
-        return True
-
-    def parse_datetime(self, value):
-        """Parse datetime fields from string."""
-        try:
-            format_str = "%I:%M %p, %Y-%m-%d"
-            return datetime.strptime(f'{value}, 2023-01-01', format_str)
-
-        except ValueError:
-            QMessageBox.warning(self.parent_widget, "Invalid", "Please input a valid time in the format: 'HH:MM am/pm'.")
-            logging.error(f"Input value isn't a valid integer. Input: {value}")
-            return None
-        except Exception as e:
-            logging.error(f"Exception when parsing datetime in setData: {type(e)} - {e}")
-            return None
-
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         """
         This method provides the data for the header given the section (which is the column index for horizontal headers and row index for vertical headers), the orientation (horizontal or vertical), and the role.
@@ -490,7 +212,7 @@ class TableModel(QAbstractItemModel):
 
         total_rows = len(self._data)
 
-        if index.row() == total_rows-1 and index.column() == 1:
+        if index.row() == total_rows - 1 and index.column() == 1:
             return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
 
         if not index.isValid():

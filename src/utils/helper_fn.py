@@ -128,3 +128,4 @@ def calculate_from_time(to_time, duration):
         from_time = to_time - timedelta(minutes=duration)
         return from_time
     return to_time
+

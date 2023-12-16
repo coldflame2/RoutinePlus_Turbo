@@ -1,6 +1,10 @@
-Building GUI app using PyQt6 bindings and the architecture is MVC.
+Building GUI app using PyQt6 bindings and the architecture is MVC. It's called Routine Plus turbo. 
+It shows a table, where each row represents a task with start, end, duration, name, and reminder value. 
+The first cell of first row represents midnight and "from" or "end" cell of the last row represents end of the day (again midnight).
 
-I have TableView class (QTableView) for view and TableModel(QAbstractItemModel) for model. Also AppData for SQLite3 database.
+I have TableView class (QTableView) for view and TableModel(QAbstractItemModel) for model. Also, AppData for SQLite3 database.
+
+My question is, 
 
 This is the structure of the app explain in the order of execution.
 

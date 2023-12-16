@@ -99,7 +99,7 @@ class LeftBar(QObject):
             ]
 
         secondary_buttons_names = [
-            {"display_name": "Load", "action_name": "Open", "tool_tip": "Open a file"},
+            {"display_name": "Delete", "action_name": "Delete", "tool_tip": "Delete Task"},
             {"display_name": "Tray", "action_name": "Minimize to Tray", "tool_tip": "minimize to system tray"},
             ]
 

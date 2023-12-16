@@ -5,8 +5,8 @@ from datetime import datetime
 
 MAJOR = 1
 MINOR = 0
-PATCH = 0
-REMARKS = f"first_build"
+PATCH = 3
+REMARKS = f""
 
 APP_NAME = "Routine Plus Turbo"
 ORG_NAME = "ColdFlame"

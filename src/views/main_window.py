@@ -106,7 +106,7 @@ class MainWindow(QMainWindow):
         self.left_bar.left_bar_signals.connect(self.connect_to_controller)
 
     def connect_to_controller(self, action):
-        logging.debug(f"Emitting '{action}' signal from main_frame after catching it from LeftBar.")
+        logging.debug(f"Emitting '{action}' signal from MainWindow (originally emitted from LeftBar).")
         self.controller.signal_from_left_bar(action)
 
     def _configure_title_bar(self):
@@ -200,18 +200,15 @@ class MainWindow(QMainWindow):
 
 class HoverSplitter(QSplitter):
     def createHandle(self) -> QSplitterHandle:
-        self.setHandleWidth(5)
+        self.setHandleWidth(1)
         return HoverSplitterHandle(self.orientation(), self)
 
 
 class HoverSplitterHandle(QSplitterHandle):
     def __init__(self, orientation: Qt.Orientation, parentSplitter: QSplitter):
         super().__init__(orientation, parentSplitter)
-        self.setStyleSheet("background-color: #DDEAF1;")
+        self.setStyleSheet("background-color: #4C5F96;")
         self.setMouseTracking(True)
 
     def enterEvent(self, event):
         self.setStyleSheet("background-color: #494F74;")
-
-    def leaveEvent(self, event):
-        self.setStyleSheet("background-color: #DDEAF1;")

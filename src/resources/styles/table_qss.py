@@ -1,60 +1,63 @@
-TABLE_STYLES = ("""
-    QTableView {
-        background-color: #646879;
-        font-size: 10pt;
+""" This module contains the QSS styles for the table widget. """
+
+app_accent_color = "#36436A"
+
+background = item_border = "#B3BFDC"  # below rows, item borders
+
+item_bg = "#595D6E"  # item background
+
+item_font_color = "#DDEAF3"  # item font color
+item_font_hover_color = "#DDEAF3"  # item font color when hovered
+item_font_selected_color = "#232323"  # item font color when selected
+
+item_hover_bg = app_accent_color  # item background when hovered
+
+item_border_left = item_border_top = "#30494D"  # item border left
+item_hover_border = "#646879"  # item border when hovered
+item_selected_bg = "#DCFFFF"  # item background when selected
+item_selected_border = app_accent_color  # item border when selected
+
+header_bg = "#36436A"  # header background
+header_font_color = "#DDEAF3"  # header font color
+header_font_size = "14pt"  # header font size
+table_font_size = "8pt"  # table font size
+selected_font_size = "15pt"  # selected item font size
+
+
+TABLE_STYLES = f"""
+    QTableView {{
+        background-color: {background};
         gridline-color: transparent;
-    }
+    }}
 
-    QTableView::item {
-        background-color: #F0F0F0;
-        font-size: 10pt;
-        
-        border-top: 2px solid #646879;
-        border-right: 1px solid #646879;
-        border-bottom: 4px solid #646879;
-        border-left: 0px solid #646879;
-        
-        padding: 5px 5px 5px 8px; /*top, right, bottom, left*/
+    QTableView::item {{
+    }}
 
-    }
-
-    QTableView::item:hover {
-        background-color: #E6F0F0;
-        font-size: 12pt;
-
-        border-top: 1px solid #646879;
-        border-right: 1px solid #646879;
-        border-bottom: 4px solid #36436A;
-        border-left: 0px solid #646879;   
-         
-        padding: 0px 5px 0px 8px; /*top, right, bottom, left*/
+    QTableView::item:hover {{
+    }}
     
-    }
+    QTableView::item:selected {{
+        }}
     
-    QTableView::item:selected {
-        background-color: #B0BDE3;
-        color: black;
-    }
-    
-    QTableView::item:focus {
+    QTableView::item:focus {{
         outline: none;
-    }
+    }}
 
     
-    QHeaderView::section {
-        background-color: #36436A;
-        color: #DDEAF3;
-        font-size: 14pt;
+    QHeaderView::section {{
+        background-color: {header_bg};
+        color: {header_font_color};
+        font-size: {header_font_size};
         font-family: "Calibri";
         border-top: 1px solid #33384F;
         border-right: 3px solid #33384F;
         border-bottom: 1px solid #33384F;
         border-left: 1px solid #33384F;            
-    }
+    }}
 
 
-    QTableCornerButton::section {
+    QTableCornerButton::section {{
         background-color: #36436A;
-    }
+    }}
 
-""")
+"""

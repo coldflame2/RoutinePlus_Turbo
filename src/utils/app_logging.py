@@ -11,10 +11,8 @@ from PyQt6.QtWidgets import QPlainTextEdit, QWidget, QVBoxLayout, QPushButton
 
 def setup_root_logger():  # This is a root logger, which is called in main(), and so it applies to the whole app
     environment_cls = helper_fn.get_environment_cls(False, caller='debugging')
-    logs_folder_path = os.path.join(environment_cls.APP_FOLDER_PATH, environment_cls.LOG_FOLDER_NAME)
-    os.makedirs(logs_folder_path, exist_ok=True)  # Create the log folder if it doesn't exist
 
-    log_file_path = os.path.join(logs_folder_path, environment_cls.LOG_FILE_NAME)
+    log_file_path = os.path.join(environment_cls.LOG_FOLDER_PATH, environment_cls.LOG_FILE_NAME)
 
     file_handler = logging.handlers.RotatingFileHandler(
         log_file_path, maxBytes=900000, backupCount=6

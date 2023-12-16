@@ -4,8 +4,8 @@ import sys
 from aenum import Enum, NoAlias
 from datetime import datetime
 
-COLUMN_KEYS = ["from_time", "to_time", "duration", "task_name", "reminders"]
-VISIBLE_HEADERS = ["Start", "End", "Duration", "Task", "Reminders"]
+COLUMN_KEYS = ["id", "from_time", "to_time", "duration", "task_name", "reminders", "type", "task_sequence"]
+VISIBLE_HEADERS = ["ID", "Start", "End", "Duration", "Task", "Reminders", "type", "Sequence"]
 
 # Constants
 DATE_FORMAT = "%I:%M %p, %Y-%m-%d"
@@ -24,20 +24,22 @@ def convert_to_datetime(time_str):
 
 default_tasks = (
     {
-        'id': 1,
         'from_time': convert_to_datetime('12:00 AM'),
         'to_time': convert_to_datetime('07:00 AM'),
         'duration': 420,
-        'task_name': 'Wake up',
-        'reminders': convert_to_datetime('12:00 AM')
+        'task_name': 'Sleep/Wake up',
+        'reminders': convert_to_datetime('12:00 AM'),
+        'type': 'main',
+        'task_sequence': 1
         },
     {
-        'id': 999,
         'from_time': convert_to_datetime('07:00 AM'),
         'to_time': convert_to_datetime('12:00 AM'),
         'duration': 1020,
-        'task_name': 'Get ready',
-        'reminders': convert_to_datetime('06:55 AM')
+        'task_name': 'Sleep',
+        'reminders': convert_to_datetime('06:55 AM'),
+        'type': 'main',
+        'task_sequence': 2
         }
     )
 
