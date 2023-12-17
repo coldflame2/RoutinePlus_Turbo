@@ -1,0 +1,60 @@
+
+This app is called 'Routine Plus Turbo' and is a GUI app for Windows intended to be used as a productivity app to set daily routine.
+ The app is built upon PyQt6 bindings and the architecture is model-view-controller (MVC).
+
+It shows a table of the routine, where each row represents a task with start, end, duration, name, and reminder value.
+Hidden columns for internal use are also present. They are: id, type, task_sequence.
+
+The first cell of first row represents midnight and "from" or "end" cell of the last row represents end of the day (again midnight).
+
+Main files/modules include: main.py, main_window.py, table_view.py, table_model.py, app_data.py, left_bar.py, and controller.py.
+
+Classes within these modules are: MainApp, MainWindow, TableView, TableModel, AppData, LeftBar, and Controller.
+
+MainApp is subclass of QApplication:
+
+MainWindow is subclass of QMainWindow: It defines layout and adds widgets, including TableView and LeftBar.
+
+TableView is subclass of QTableView: It defines table view and delegates, and connects signals to slots.
+
+TableModel is subclass of QAbstractItemModel: It defines model for the view. It also executes SQL queries and updates the table. It also executes methods when add, edit, or delete buttons are clicked.
+
+AppData is just custom class: It defines SQLite Database, creates 'daily_routine' table, converts strings to datetime objects, and vice versa. It also defines some helper functions.
+
+LeftBar is subclass of QObject: It defines layout and adds navigation and task buttons on the left side of the app's interface. It emits signals when the button is clicked. (That signal is connected to slot in MainWindow, which then emits another signal, which then is connected to slot in Controller.)
+
+Controller is custom class: Catches signals from MainWindow, LeftBar, and TableView. It uses appropriate functions from task_services.py and time_calculator.py and calls methods of TableModel to update the table.
+
+Tree structure of the app is as follows:
+src
+├── main.py
+├── controllers
+│   ├── controller.py
+│   ├── task_services.py
+│   └── time_calculator.py
+├── dev
+│   ├── build.py
+│   ├── environment.py
+│   ├── get_tree_structure.py
+│   └── test_database_conn.py
+├── hooks
+│   └── hook-plyer.py
+├── models
+│   ├── app_data.py
+│   └── table_model.py
+├── resources
+│   ├── default.py
+│   ├── icons (Directory)
+│   └── styles (Directory)
+├── utils
+│   ├── app_logging.py
+│   ├── helper_fn.py
+│   └── singleton.py
+└── views
+    ├── delegates
+    │   └── table_delegate.py
+    ├── left_bar.py
+    ├── main_window.py
+    ├── ribbon.py
+    ├── table_view.py
+    └── title_bar.py

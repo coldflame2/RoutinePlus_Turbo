@@ -127,7 +127,9 @@ class TableModel(QAbstractItemModel):
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """
-        This method is called by the view to retrieve the data for a given index. The role parameter specifies what kind of data is being requested (e.g., display data, tooltip data). It doesn't change data.
+        This method is called by the view to retrieve the data for a given index. The role parameter
+        specifies what kind of data is being requested (e.g., display data, tooltip data). It doesn't
+        change data.
         """
 
         if not index.isValid() or role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
@@ -135,6 +137,14 @@ class TableModel(QAbstractItemModel):
 
         row_data = self._data[index.row()]
         column_key = self.column_keys[index.column()]
+
+        if row_data.get('type') == 'subtask':
+            if column_key in ['id', 'type', 'task_name', 'type', 'task_sequence']:
+                value = row_data.get(column_key, None)
+                return value
+            else:
+                subtask_name = row_data.get('task_name', None)
+                return subtask_name
 
         if column_key in ["from_time", "to_time", "reminders"]:  # convert datetime to string for view
             datetime_value = row_data.get(column_key, None)
@@ -163,11 +173,8 @@ class TableModel(QAbstractItemModel):
             else:
                 return None
 
-        if column_key in ["id", "type", "task_sequence"]:
-            value = row_data.get(column_key, None)
 
-            value_str = str(value)
-            return value_str
+
 
         return row_data.get(column_key, None)
 

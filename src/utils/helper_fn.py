@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 
 from PyQt6.QtGui import QColor
-from PyQt6.QtCore import QRect, QTime
+from PyQt6.QtCore import QRect, QTime, QRectF
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
 from src.dev.environment import environment_cls
@@ -131,10 +131,9 @@ def calculate_from_time(to_time, duration):
 
 
 def add_padding(rect, left, top, right, bottom):
-    # Shrink the rect by 'padding' on all sides
     return QRect(
         rect.left() + left,
         rect.top() + top,
         rect.width() - left - right,
         rect.height() - top - bottom
-        )
+    )

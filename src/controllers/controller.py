@@ -17,6 +17,7 @@ class Controller:
             'Save': self.process_saving_all,
             'Save As': self.save_as,
             'New Task': self.process_new_task,
+            'New Subtask': self.process_new_subtask,
             'Delete': self.process_delete_task,
             'Testing': self.testing,
             }  # Action:Method
@@ -30,6 +31,10 @@ class Controller:
     def process_new_task(self):
         logging.debug("New Task requested in controller.")
         self.task_service.create_new_task()
+
+    def process_new_subtask(self):
+        logging.debug("New Subtask requested in controller.")
+        self.task_service.create_new_subtask()
 
     def process_delete_task(self):
         logging.debug(f"'Delete Task' requested in controller.")

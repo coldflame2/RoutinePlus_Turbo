@@ -4,13 +4,9 @@ The first cell of first row represents midnight and "from" or "end" cell of the 
 
 I have TableView class (QTableView) for view and TableModel(QAbstractItemModel) for model. Also, AppData for SQLite3 database.
 
-My question is, 
-
 This is the structure of the app explain in the order of execution.
 
-```main() creates instance of model and view.
-    |
-    |__ and controller and passes model and view as arguments.
+main() creates instance of model and view and controller and passes model and view as arguments.
 
 main() creates instance of MainWindow (passes view and controller)
 

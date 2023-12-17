@@ -4,8 +4,8 @@ import sys
 from aenum import Enum, NoAlias
 from datetime import datetime
 
-COLUMN_KEYS = ["from_time", "to_time", "duration", "task_name", "reminders"]
-VISIBLE_HEADERS = ["Start", "End", "Duration", "Task", "Reminders"]
+COLUMN_KEYS = ["id", "from_time", "to_time", "duration", "task_name", "reminders", "type", "task_sequence"]
+VISIBLE_HEADERS = ["id", "from", "end", "duration", "name", "reminders", "type", "seq"]
 
 # Constants
 DATE_FORMAT = "%I:%M %p, %Y-%m-%d"

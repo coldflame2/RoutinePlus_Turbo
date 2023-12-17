@@ -72,14 +72,22 @@ class AppData:
 
         cursor = self.conn.execute(select_query)
 
-        data_dt_format = []  # to store formatted data after converting string from database to datetime
+        formatted_data = []  # to store formatted data after converting string from database to datetime
         for each_row_data in cursor.fetchall():
-            each_row_data['from_time'] = helper_fn.string_to_datetime(each_row_data['from_time'])
-            each_row_data['to_time'] = helper_fn.string_to_datetime(each_row_data['to_time'])
-            each_row_data['reminders'] = helper_fn.string_to_datetime(each_row_data['reminders'])
-            data_dt_format.append(each_row_data)
+            # check data type of each value in the row
 
-        return data_dt_format
+            if each_row_data['type'] == 'main':
+                logging.debug("row type is main")
+                each_row_data['from_time'] = helper_fn.string_to_datetime(each_row_data['from_time'])
+                each_row_data['to_time'] = helper_fn.string_to_datetime(each_row_data['to_time'])
+                each_row_data['reminders'] = helper_fn.string_to_datetime(each_row_data['reminders'])
+                formatted_data.append(each_row_data)
+
+            else:
+                logging.debug("row type is subtask")
+                formatted_data.append(each_row_data)
+
+        return formatted_data
 
     def insert_new_row(self, row_data):
         logging.debug(f"Inserting new task in the database.")
@@ -97,7 +105,7 @@ class AppData:
         inserted_row_id = cursor.lastrowid
 
         # Optionally, you can log the inserted row ID
-        logging.debug(f"Inserted new task with ID: {inserted_row_id}")
+        logging.debug(f"Inserted new task with ID: {inserted_row_id}. Name:{row_data['task_name']}")
 
         return inserted_row_id
 

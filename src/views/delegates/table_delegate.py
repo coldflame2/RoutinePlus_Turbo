@@ -1,4 +1,6 @@
-from PyQt6.QtCore import QModelIndex, QRect, Qt
+import logging
+
+from PyQt6.QtCore import QModelIndex, QRect, Qt, QRectF
 from PyQt6.QtGui import QBrush, QColor, QFont, QPalette, QPainter, QPen
 from PyQt6.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate, QStyle
 
@@ -8,95 +10,113 @@ from src.utils import helper_fn
 class TableDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.row_type_dict = {}
+        logging.debug(f"TableDelegate class constructor starting. Nothing in TableDelegate constructor.")
+
+    def update_row_type_dict(self, model):
+        logging.debug(f"Updating row type dict.")
+        for row in range(model.rowCount()):
+            try:
+                row_type = model.data(model.index(row, 6), Qt.ItemDataRole.DisplayRole)
+                self.row_type_dict[row] = row_type
+            except Exception as e:
+                logging.error(f"Error updating row type: {e}")
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
+
         model = index.model()
         text_in_cell = model.data(index, Qt.ItemDataRole.DisplayRole)
+        task_type = self.row_type_dict.get(index.row())
 
-        self.set_font_and_pen(painter, option, text_in_cell)  # font size and pen color
-        self.paint_special_rows(painter, option, index, model.rowCount())
+        self.set_font_and_pen(painter)  # Set font and pen
 
+        self.paint_rows_bg(painter, option, index, model.rowCount(), text_in_cell)  # Fill rect
+
+        if task_type == 'subtask':
+            self.paint_subtask(painter, option, index, text_in_cell)  # Fill subtask rect
+
+        self.paint_state(painter, option, text_in_cell)  # Draw line and fill color
+
+    def set_font_and_pen(self, painter):
+        font = QFont("Roboto", 11)  # Example: Arial font with size 10
+        font.setWeight(QFont.Weight.Thin)  # Setting font weight
+        painter.setFont(font)
+
+        pen = QPen(QColor('black'), 1)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)  # Smooth end caps for lines
+        painter.setPen(pen)
+
+        brush = QBrush(QColor('black'))
+        painter.setBrush(brush)
+
+    def paint_rows_bg(self, painter, option, index, total_rows, text):
+
+        if index.row() == 0:
+            color = "#DCEAEA"
+            fill_rect = helper_fn.add_padding(option.rect, 2, 1, 0, 5)
+        elif index.row() == total_rows - 1:
+            color = "#DCEAEA"
+            fill_rect = helper_fn.add_padding(option.rect, 1, 5, 0, 0)
+        else:
+            color = "#F0FFFF"
+            fill_rect = helper_fn.add_padding(option.rect, 1, 1, 0, 0)
+
+        self.fill_rect_with_color(painter, option, fill_rect, color)
+
+    def paint_subtask(self, painter, option, index, text):
+        padded_rect = helper_fn.add_padding(option.rect, 2, 1, 0, 0)
+        self.fill_rect_with_color(painter, option, padded_rect, "#CCE0FA")
+
+        next_row = index.row() + 1
+        task_type_next_row = self.row_type_dict.get(next_row)
+
+        if task_type_next_row == 'main':
+            self.draw_line(painter, padded_rect, "#36436A", 3)
+
+    def paint_state(self, painter, option, text):
         is_selected = option.state & QStyle.StateFlag.State_Selected
         is_hovered = option.state & QStyle.StateFlag.State_MouseOver
 
-        # Handle selected state
-        if is_selected:
-            self.paint_selected_state(painter, option, text_in_cell)
-
+        if is_selected and is_hovered:
+            self.paint_hover_on_selected(painter, option)
+        elif is_selected:
+            self.paint_selected_state(painter, option, text)
         elif is_hovered:
             self.paint_hover_state(painter, option)
 
-        # hovered on selected items
-        if is_hovered and is_selected:
-            self.paint_hover_on_selected(painter, option, text_in_cell)
+        text_rect = helper_fn.add_padding(option.rect, 25, 1, 1, 1)
+        self.paint_text(painter, text_rect, text)
 
-        self.paint_text(painter, option, text_in_cell)
+    def paint_hover_on_selected(self, painter, option):
+        padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
+        self.fill_rect_with_color(painter, option, padded_rect, "#C1DEF6")
 
-    def set_font_and_pen(self, painter, option, text):
-        # Apply common font and pen settings here
-        font = QFont()
-        font.setPointSize(10)
-        painter.setFont(font)
-        
+        padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
+        self.draw_line(painter, padded_rect, "#36436A", 1)
         painter.setPen(QColor('black'))
-
-    def paint_special_rows(self, painter, option, index, total_rows):
-        # first and last row
-        first_and_last = "#959EB7"
-
-        padded_rect = helper_fn.add_padding(option.rect, 10, 3, 0, 2)
-        if index.row() == 0:
-            painter.fillRect(padded_rect, QColor(first_and_last))  # Fill with color
-        elif index.row() == total_rows - 1:
-            painter.fillRect(padded_rect, QColor(first_and_last))  # Fill with color
-        else:
-            other_row_color = "#F0FFFF"
-            painter.fillRect(padded_rect, QColor(other_row_color))
-
-    def paint_hover_state(self, painter, option):
-        if option.state & QStyle.StateFlag.State_MouseOver:
-
-            item_hover_bg = "#36436A"
-            padded_rect_fill = helper_fn.add_padding(option.rect, 10, 0, 0, 0)
-            painter.fillRect(padded_rect_fill, QBrush(QColor(item_hover_bg)))
-
-            accent_color_lighter = "#9AB0FF"
-            painter.setPen(QPen(QColor(accent_color_lighter), 3))
-            painter.drawLine(padded_rect_fill.bottomLeft(), padded_rect_fill.bottomRight())
-
-            painter.setPen(QColor('white'))
 
     def paint_selected_state(self, painter, option, text):
-        if option.state & QStyle.StateFlag.State_Selected:
-            font = QFont()
-            font.setPointSize(10)
-            painter.setFont(font)
-            painter.setPen(QColor('black'))
-
-            item_selected_bg = "#C8E6FF"  # item background when selected
-
-            padded_rect = helper_fn.add_padding(option.rect, 10, 0, 0, 0)
-            painter.fillRect(padded_rect, QBrush(QColor(item_selected_bg)))
-
-            padded_rect = helper_fn.add_padding(option.rect, 20, 15, 0, 15)
-            painter.drawText(padded_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, str(text))
-
-            app_accent_color = "#36436A"
-            painter.setPen(QColor(app_accent_color))
-            painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
-
-    def paint_hover_on_selected(self, painter, option, text):
-        hover_on_selected_bg = "#C1DEF6"
-        padded_rect_fill = helper_fn.add_padding(option.rect, 10, 0, 0, 0)
-        painter.fillRect(padded_rect_fill, QBrush(QColor(hover_on_selected_bg)))
-        
-        app_accent_color = "#36436A"
-        painter.setPen(QPen(QColor(app_accent_color), 3))
-        painter.drawLine(padded_rect_fill.bottomLeft(), padded_rect_fill.bottomRight())
-
+        padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
+        self.fill_rect_with_color(painter, option, padded_rect, "#C8E6FF")
+        self.draw_v_line(painter, padded_rect, "#36436A", 1)
         painter.setPen(QColor('black'))
 
-    def paint_text(self, painter, option, text):
-        # Paint the text
-        padded_rect_text = helper_fn.add_padding(option.rect, 20, 15, 0, 15)
-        painter.drawText(padded_rect_text, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, str(text))
+    def paint_hover_state(self, painter, option):
+        padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
+        self.fill_rect_with_color(painter, option, padded_rect, "#36436A")
+        painter.setPen(QColor('white'))
+
+    def fill_rect_with_color(self, painter, option, rect_fill, color):
+        painter.fillRect(rect_fill, QColor(color))
+
+    def draw_line(self, painter, rect_line, color, width):
+        painter.drawLine(rect_line.bottomLeft(), rect_line.bottomRight())
+
+    def draw_v_line(self, painter, rect_line, color, width):
+        painter.drawLine(rect_line.topRight(), rect_line.bottomRight())
+
+    def paint_text(self, painter, rect, text):
+        painter.drawText(rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, str(text))
+
