@@ -14,7 +14,7 @@ class TableDelegate(QStyledItemDelegate):
         logging.debug(f"TableDelegate class constructor starting. Nothing in TableDelegate constructor.")
 
     def update_row_type_dict(self, model):
-        logging.debug(f"Updating row type dict.")
+        logging.debug(f"Updating row_type_dict in Delegate.")
         for row in range(model.rowCount()):
             try:
                 row_type = model.data(model.index(row, 6), Qt.ItemDataRole.DisplayRole)

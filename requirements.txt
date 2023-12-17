@@ -1,3 +1,4 @@
 aenum==3.1.15
 PyInstaller==6.3.0
 PyQt6==6.6.1
+aenum==3.1.15

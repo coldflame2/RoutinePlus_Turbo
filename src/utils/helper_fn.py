@@ -137,3 +137,11 @@ def add_padding(rect, left, top, right, bottom):
         rect.width() - left - right,
         rect.height() - top - bottom
     )
+
+def ordinal_suffix(n):
+    """Return the ordinal suffix of an integer."""
+    if 10 <= n % 100 <= 20:
+        suffix = 'th'
+    else:
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+    return suffix

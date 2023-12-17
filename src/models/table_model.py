@@ -51,8 +51,6 @@ class TableModel(QAbstractItemModel):
             new_task_sequence=None
     ):
 
-        logging.debug(f"Updating value/s of row: '{row}'.")
-
         if 0 <= row < self.rowCount():
             changed_indices = []
 
