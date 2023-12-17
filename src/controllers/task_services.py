@@ -12,22 +12,17 @@ class TaskService:
         self.time_calculator = TimeCalculator()
 
     def create_new_task(self):
-        """
-        'replace_index' keyword is used to refer to the index where new row will be inserted.
-        It's always the last row's index.
-
-        'after_this' refers to the row above the 'replace_index' row and is used to get data for new row.
-        """
         logging.debug("Executing New Task Request in TaskService.")
-
         selected_index = self.get_selected_index()
+
+        if selected_index is None:
+            logging.debug(f"No row selected.")
+            return
+        if selected_index == self.model.rowCount() - 1:
+            logging.debug(f"Cannot add new row below the last row.")
+            return
+
         replace_index = selected_index + 1
-        if replace_index is None:
-            logging.debug(f"No row selected. Returning.")
-            return
-        if replace_index == self.model.rowCount():
-            logging.debug(f"Last row cannot be a subtask. Returning.")
-            return
 
         logging.debug(f"Inserting new row at index:{replace_index}")
 
@@ -64,6 +59,7 @@ class TaskService:
         self.update_sequences_below_row(replace_index)  # Update task sequences
 
     def create_new_subtask(self):
+        logging.debug("Executing New Subtask Request in TaskService.")
         selected_row_index = self.get_selected_index()
         if selected_row_index is None:
             logging.debug(f"No row selected. Returning.")
@@ -72,19 +68,20 @@ class TaskService:
             logging.debug(f"Last row cannot be a subtask. Returning.")
             return
 
-        selected_sequence = self.model.get_row_data(selected_row_index, column_key='task_sequence')
         replace_index = selected_row_index + 1
+        logging.debug(f"Inserting new subtask at index:{replace_index}")
 
         # For subtask name in 'task_name'
+        selected_sequence = self.model.get_row_data(selected_row_index, column_key='task_sequence')
         sequence_new = selected_sequence + 1
-        ordinal_suffix_for_new = helper_fn.ordinal_suffix(sequence_new)
+        task_serial = f'{sequence_new}{helper_fn.ordinal_suffix(sequence_new)}'  # Just for display
 
         subtask_data_to_insert = {
             'id': None,
             'from_time': None,
             'to_time': None,
             'duration': None,
-            'task_name': f'New Subtask',
+            'task_name': f'New Subtask. {task_serial}',
             'reminders': None,
             'type': 'subtask',
             'task_sequence': sequence_new,
@@ -92,7 +89,7 @@ class TaskService:
 
         logging.debug(f"replace_index:{replace_index}, selected_sequence:{selected_sequence},"
                       f"sequence_new:{sequence_new}, "
-                      f" ordinal_suffix_for_new:{sequence_new}{ordinal_suffix_for_new}")
+                      f" ordinal_suffix{task_serial}")
 
         self.model.insert_new_row(replace_index, subtask_data_to_insert)
 
