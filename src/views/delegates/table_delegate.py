@@ -2,7 +2,7 @@ import logging
 
 from PyQt6.QtCore import QModelIndex, QRect, Qt, QRectF
 from PyQt6.QtGui import QBrush, QColor, QFont, QPalette, QPainter, QPen
-from PyQt6.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate, QStyle
+from PyQt6.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate, QStyle, QLineEdit
 
 from src.utils import helper_fn
 
@@ -21,6 +21,13 @@ class TableDelegate(QStyledItemDelegate):
                 self.row_type_dict[row] = row_type
             except Exception as e:
                 logging.error(f"Error updating row type: {e}")
+
+    def createEditor(self, parent, option, index):
+        editor = QLineEdit(parent)
+        font = editor.font()
+        font.setPointSize(12)
+        editor.setFont(font)
+        return editor
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
