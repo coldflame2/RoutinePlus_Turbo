@@ -16,15 +16,23 @@ class TableView(QTableView):
         super().__init__(*args, **kwargs)
         logging.debug(f"TableView class constructor starting. Nothing in TableView constructor.")
 
+        self.clicked_index = None
+        self.clicked.connect(self.on_cell_clicked)
+
+    def on_cell_clicked(self, index):
+        self.clicked_index = index
+        self.update()
+
     def setModel(self, model):
         super().setModel(model)
 
-        self.table_delegate = TableDelegate()
+        self.table_delegate = TableDelegate(self)
         self.setItemDelegate(self.table_delegate)
 
         self.connect_model_signals()
+        self.set_span_for_subtasks()
+
         self.set_properties()
-        self.set_triggers()
         self.set_height()
         self.apply_styles()
         self.adjust_col_widths()
@@ -43,41 +51,49 @@ class TableView(QTableView):
         model.modelReset.connect(lambda: self.table_delegate.update_row_type_dict(model))
 
     def set_properties(self):
-        # Additional settings for transparent background can be here
-        self.setShowGrid(False)  # Optionally hide the grid lines
-        self.setMouseTracking(True)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked)
 
+        self.setMouseTracking(True)
+        self.setShowGrid(False)
         self.setFrameStyle(0)  # No frame
-        self.viewport().setAutoFillBackground(True)
 
         self.horizontalHeader().setVisible(True)
-        self.verticalHeader().setVisible(False)
+        self.verticalHeader().setFrameStyle(0)  # No frame
 
-        self.set_span_for_subtasks()
+        self.verticalHeader().setVisible(True)
+        self.verticalHeader().setFrameStyle(0)  # No frame
+        self.verticalHeader().setSectionsClickable(True)
+
+
+
+        self.verticalHeader().setSectionsMovable(True)
+
+        self.verticalHeader().setSortIndicatorShown(False)
+        self.verticalHeader().setStretchLastSection(False)
+
+        self.setSortingEnabled(False)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        self.setTabKeyNavigation(True)
+        self.setWordWrap(True)
+        self.setCornerButtonEnabled(True)
+        self.setDragEnabled(True)
+        self.setDragDropOverwriteMode(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.setDropIndicatorShown(True)
+
+        # I see no effects of these properties
+        self.viewport().setAutoFillBackground(True)
 
     def set_span_for_subtasks(self):
-        # Get Data from model for column 7
         for row in range(self.model().rowCount()):
             task_type = self.model().data(self.model().index(row, 6), Qt.ItemDataRole.DisplayRole)
-            print(f"Task type:{task_type}")
+
             if task_type == 'subtask':
-                print("Task type is subtask")
                 for column in range(self.model().columnCount()):
-                    # Span the cell at column 5 across multiple columns, e.g., 3 columns
-                    self.setSpan(row, 1, 1, 7)
+                    # Span the cell at column 1 across multiple columns
+                    self.setSpan(row, 1, 1, 5)
 
-            else:
-                print("Task type is not subtask")
-                self.horizontalHeader().setVisible(True)
-                self.verticalHeader().setVisible(True)
-
-    def set_triggers(self):
-        try:
-            self.setEditTriggers(
-                QAbstractItemView.EditTrigger.DoubleClicked | QAbstractItemView.EditTrigger.AnyKeyPressed
-            )
-        except Exception as e:
-            logging.error(f" Exception type:{type(e)} set_properties in TableView (Error Description:{e}")
 
     def set_height(self):
         self.verticalHeader().setDefaultSectionSize(45)
@@ -91,20 +107,13 @@ class TableView(QTableView):
                 self.setRowHeight(row, 45)
 
     def apply_styles(self):
-        self.horizontalHeader().setStyleSheet(table_qss.HEADER_STYLE)
+        self.setStyleSheet(table_qss.TABLE_STYLE)
+        self.horizontalHeader().setStyleSheet(table_qss.HORIZONTAL_HEADER_STYLE)
+        self.verticalHeader().setStyleSheet(table_qss.VERTICAL_HEADER_STYLE)
 
     def adjust_col_widths(self):
-        # Resize first three columns to fit their content and add extra space
-        row_id = 0
-        from_time = 1
-        to_time = 2
-        duration = 3
-        task_name = 4
-        reminder = 5
-        col_type = 6
-        task_sequence = 7
-
         task_type = self.model().data(self.model().index(0, 6), Qt.ItemDataRole.DisplayRole)
+
         if task_type == 'subtask':
             return
 
@@ -122,7 +131,6 @@ class TableView(QTableView):
 
     def paintEvent(self, event):
         painter = QPainter(self.viewport())
-        background = item_border = "#B3BFDC"
-
-        painter.fillRect(self.viewport().rect(), QColor(background))  # Choose your color
+        background = "#B3BFDC"
+        painter.fillRect(self.viewport().rect(), QColor(background))
         super().paintEvent(event)

@@ -227,10 +227,14 @@ class TableModel(QAbstractItemModel):
         The view calls this method to get the text that should be displayed in the header of a particular column or row.
         """
 
-        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
-            # Return the visible header label for the given section (column index)
-            if 0 <= section < len(self.visible_headers):  # Section is like column index. 0 section means 'Start'
-                return self.visible_headers[section]
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                # Return the visible header label for the given section (column index)
+                if 0 <= section < len(self.visible_headers):  # Section is like column index. 0 section means 'Start'
+                    return self.visible_headers[section]
+            elif orientation == Qt.Orientation.Vertical:
+                # Return the row number for the given section (row index)
+                return section + 1
 
         return None
 
