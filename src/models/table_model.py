@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Any, Dict, List
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
@@ -171,9 +172,6 @@ class TableModel(QAbstractItemModel):
             else:
                 return None
 
-
-
-
         return row_data.get(column_key, None)
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
@@ -195,7 +193,32 @@ class TableModel(QAbstractItemModel):
             return self.handle_duration_input(index, row, value, role)
 
         if column_key in ["from_time", "to_time"]:
-            return self.set_and_update_fields_and_notify(value, row, column_key)
+            return self.handle_time_inputs(value, row, column_key)
+
+    def handle_task_name_input(self, index, row, value, role):
+        self._data[row]['task_name'] = value
+        self.dataChanged.emit(index, index, [role])
+        return True
+
+    def handle_duration_input(self, index, row, value, role):
+        try:
+            new_duration = int(value)
+            self._data[row]['duration'] = new_duration
+            self.dataChanged.emit(index, index, [role])
+            return True
+        except ValueError:
+            logging.error(f" VALUE ERROR with new input value {value} in r:c={row}:{index.column()}")
+            return False
+
+    def handle_time_inputs(self, value, row, column_key):
+        try:
+            # Save as datetime object in format: 12:00 AM, 2023-01-01
+            new_time = datetime.strptime(f'{value}, 2023-01-01', '%I:%M %p, %Y-%m-%d')
+            self._data[row][column_key] = new_time
+            return True
+        except ValueError:
+            logging.error(f" VALUE ERROR with new input value {value} in r:c={row}:{column_key}")
+        return False
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         """
