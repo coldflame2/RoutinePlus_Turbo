@@ -138,19 +138,3 @@ class AppData:
 
     def __del__(self):
         self.close()
-
-
-"""
-Sequence of events for AppData class analysis:
-
-1. Directories are created.
-
-2. Connection to database is established.
-
-3. Table 'daily routine' is created if it doesn't exist. (This table is created only once when the app is run for the first time.)
-
-4. Data is fetched from the database, sorted by task_sequence, and returned to the TableModel class. In case of no data, default tasks are inserted in the database by inserting default task dict to the sqlite data. In case of data, the string data in ISO format from sqlite is converted to datetime objects and returned to the TableModel class.
-
-5. When the user clicks 'Save' button, the data is either updated or inserted in the database. If the task has a valid ID, it is updated. If the task doesn't have a valid ID, it is inserted as a new task.
-
-"""
