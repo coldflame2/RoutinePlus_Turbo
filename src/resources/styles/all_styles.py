@@ -10,14 +10,6 @@ MAIN_WINDOW_STYLE = f"""
 
 title_bar_color = main_color
 
-HEADERS_STYLE = "background-color: red;"
-
-
-
-
-
-
-
 TITLE_BAR = f"""
 #containerWidget {{
     background-color: {title_bar_color};
@@ -31,30 +23,44 @@ QLabel#labelCustomTitle {{
     
 QPushButton {{
     background-color: {title_bar_color};
-    color: white;
     padding: 10px 10px;
-    border: none;
+    border-top: 0px solid #6E76B2;
+    border-bottom: 0px solid #6E76B2;
     }}
 
 QPushButton:hover {{
-    background-color: #282828;
-    color: white;
-    padding: 9px 9px;
-    margin-top: 1px;
-    margin-left: 1px;
-    border-right: 1px solid #6E76B2;
-    border-bottom: 1px solid #6E76B2;
-
+    background-color: #393939;
+    border-bottom: 0px solid #6E76B2;
     }}
 
 QPushButton:pressed {{
     background-color: {title_bar_color};
-    color: white;
-    padding: 10px 10px;
-    border: none;
+    border-bottom: 4px solid #6E76B2;
     }}
 
 """
+CLOSE_BUTTON = f"""
+    QPushButton#closeTitleButton {{
+    background-color: {title_bar_color};
+    padding: 10px 10px;
+    border-top: 0px solid #6E76B2;
+    border-bottom: 0px solid #6E76B2;
+    }}
+
+QPushButton#closeTitleButton:hover {{
+    background-color: #c42b1c;
+    border-bottom: 0px solid #6E76B2;
+    }}
+
+QPushButton#closeTitleButton:pressed {{
+    background-color: {title_bar_color};
+    border-bottom: 4px solid #6E76B2;
+    }}
+
+"""
+
+
+
 
 CUSTOM_TABLE_VIEW = """
     QTableView {

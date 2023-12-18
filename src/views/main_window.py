@@ -3,7 +3,7 @@ import logging
 import os
 
 # PyQt
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QHBoxLayout, QMainWindow, QSplitter, QSplitterHandle, QVBoxLayout, QWidget
 
@@ -20,6 +20,7 @@ from src.views.ribbon import RibbonWidget
 class MainWindow(QMainWindow):
     close_requested_signal = pyqtSignal(str)
     main_frame_signal_after_left_bar = pyqtSignal(str)
+    window_state_changed = pyqtSignal()
 
     def __init__(self, table_view, controller):
         super().__init__()
@@ -201,6 +202,11 @@ class MainWindow(QMainWindow):
         self.set_win_state_and_geometry()
         self.table_view.adjust_col_widths()
         logging.debug(f" MainWin resized. Saving geometry and state.")
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.WindowStateChange:
+            self.window_state_changed.emit()
 
 class HoverSplitter(QSplitter):
     def createHandle(self) -> QSplitterHandle:

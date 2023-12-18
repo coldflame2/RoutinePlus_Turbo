@@ -15,13 +15,12 @@ class TitleBar(QWidget):
     maximize_title_bar_clicked_signal = pyqtSignal()
     close_title_bar_clicked_signal = pyqtSignal(str)
 
-    def __init__(self, main_frame):
+    def __init__(self, main_window):
         super().__init__()
         self.dragPos = self.mapToGlobal(QPoint(0, 0))  # Initialize to (0,0) or any desired value
-        self.main_frame = main_frame
+        self.main_window = main_window
 
         self.setup_title_bar_layout()
-        self.setup_dimension_margins_size()
 
         # For Text/Label on the left
         self.setup_text_label_for_title_bar()
@@ -29,21 +28,23 @@ class TitleBar(QWidget):
         # For Buttons on the right
         self.setup_min_max_close_buttons()
 
+        self.main_window.window_state_changed.connect(self.update_maximize_restore_icon)
+
         # Add all the widgets to the 'self' QWidget
         self.add_widgets()
         self.apply_styles()
 
     def setup_title_bar_layout(self):
         self.main_layout = QHBoxLayout()
+        self.setFixedHeight(38)
+        self.main_layout.setContentsMargins(0, 0, 0, 1)  # left, top, right, bottom
+        self.main_layout.setSpacing(0)
 
         self.container_widget = QWidget()
         self.container_widget.setObjectName("containerWidget")
         self.container_layout = QHBoxLayout()
-
-    def setup_dimension_margins_size(self):
-        self.setFixedHeight(35)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)  # left, top, right, bottom
-        self.main_layout.setSpacing(0)
+        self.container_layout.setContentsMargins(0, 4, 3, 1)  # left, top, right, bottom
+        self.container_layout.setSpacing(0)
 
     def setup_text_label_for_title_bar(self):
         env_config_class = helper_fn.get_environment_cls(False, caller='TitleBar.py')
@@ -60,7 +61,8 @@ class TitleBar(QWidget):
     def setup_minimize_to_tray_button(self):
         self.minimize_tray = QPushButton('')
         self.minimize_tray.setObjectName("minTrayTitleButton")
-        minimize_tray_icon_path = helper_fn.resource_path(os.path.join('resources/icons/title_bar_icons', 'minimize_to_tray.png'))
+        minimize_tray_icon_path = helper_fn.resource_path(os.path.join('resources/icons/title_bar_icons',
+                                                                       'minimizetotray_icon.png'))
         self.minimize_tray.setIcon(QIcon(minimize_tray_icon_path))
         self.minimize_tray.setToolTip("Minimize To Tray")
         self.minimize_tray.clicked.connect(self.minimize_tray_title_bar_clicked_signal.emit)
@@ -80,6 +82,9 @@ class TitleBar(QWidget):
 
     def setup_close_button(self):
         self.close_button = QPushButton('')
+        self.close_button.setObjectName("closeTitleButton")
+        self.close_button.setToolTip("Close")
+        self.close_button.setStyleSheet(all_styles.CLOSE_BUTTON)
         close_icon_path = helper_fn.resource_path(os.path.join('resources/icons/title_bar_icons', 'close_icon.png'))
         self.close_button.setIcon(QIcon(close_icon_path))
         self.close_button.clicked.connect(lambda: self.close_title_bar_clicked_signal.emit("Title bar"))
@@ -105,23 +110,34 @@ class TitleBar(QWidget):
     def apply_styles(self):
         self.container_widget.setStyleSheet(all_styles.TITLE_BAR)
 
+    def update_maximize_restore_icon(self):
+        if self.main_window.isMaximized():
+            restore_icon_path = helper_fn.resource_path(os.path.join('resources/icons/title_bar_icons', 'restore_icon.png'))
+            self.maximize_button.setIcon(QIcon(restore_icon_path))
+            self.maximize_button.setToolTip("Restore Down")
+        else:
+            max_icon_path = helper_fn.resource_path(os.path.join('resources/icons/title_bar_icons', 'max_icon.png'))
+            self.maximize_button.setIcon(QIcon(max_icon_path))
+            self.maximize_button.setToolTip("Maximize")
+
     def mousePressEvent(self, event):
         self.dragPos = event.globalPosition().toPoint()
 
     def mouseMoveEvent(self, event):
         if event.buttons() == Qt.MouseButton.LeftButton:
-            self.main_frame.move(self.main_frame.pos() + event.globalPosition().toPoint() - self.dragPos)
+            self.main_window.move(self.main_window.pos() + event.globalPosition().toPoint() - self.dragPos)
             self.dragPos = event.globalPosition().toPoint()
 
     def maximize_restore(self):
-        if self.main_frame.isMaximized():
-            self.main_frame.showNormal()
+        if self.main_window.isMaximized():
+            self.main_window.showNormal()
             logging.debug("Custom Normal (maximize) button clicked: Window resized to normal.")
         else:
-            self.main_frame.showMaximized()
+            self.main_window.showMaximized()
             logging.debug("Custom Maximize button clicked: Window maximized.")
+        self.update_maximize_restore_icon()
 
     def delayed_minimize(self):
         logging.debug("Custom Minimize to Tray Button clicked.")
-        self.main_frame.hide()
-        QTimer.singleShot(100, self.main_frame.showMinimized)
+        self.main_window.hide()
+        QTimer.singleShot(100, self.main_window.showMinimized)
