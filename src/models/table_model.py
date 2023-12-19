@@ -31,10 +31,9 @@ class TableModel(QAbstractItemModel):
             self.app_data.close()  # Close the database connection on failure
             raise  # Re-raise the exception to signal the failure
 
-    def get_item(self, row, column_key):
+    def get_item_from_model(self, row, column_key):
         try:
             value = self._data[row][column_key]
-            logging.debug(f"Returning '{value}' for '{column_key}' in row {row}.")
             return value
         except KeyError:
             logging.error(f"KeyError: Column key '{column_key}' not found in row {row}")
@@ -43,7 +42,7 @@ class TableModel(QAbstractItemModel):
             logging.error(f"IndexError: Row index {row} is out of range")
             return None
 
-    def set_item(self, row, column_key, value):
+    def set_item_to_model(self, row, column_key, value):
         """
         Updates the value for a specified row and column.
 
@@ -73,7 +72,6 @@ class TableModel(QAbstractItemModel):
             column_index = self.column_keys.index(column_key)
             item_index = self.createIndex(row, column_index)
             self.dataChanged.emit(item_index, item_index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
-            logging.debug(f"Updated row {row}, column '{column_key}' with value '{value}'")
             return True
         except Exception as e:
             logging.error(f"Exception when updating row {row}, column '{column_key}': {e}")
@@ -110,6 +108,12 @@ class TableModel(QAbstractItemModel):
             logging.error(f"Exception when updating row {row}: {e}")
             return False
 
+    def delete_row_from_model(self, row):
+        self._data.pop(row)
+        self.dataChanged.emit(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+        self.layoutChanged.emit()
+        logging.debug(f"Row {row} deleted from model.")
+
     def save_to_database_file(self):
         logging.debug("Looping rows in model and calling update method in AppData.")
 
@@ -117,9 +121,7 @@ class TableModel(QAbstractItemModel):
             row_data = {}
             for column_key in self.column_keys:
                 row_data[column_key] = self._data[row][column_key]
-                logging.debug(f" -- Collecting data: {column_key} = {self._data[row][column_key]}.")
 
-            logging.debug(f" -- Updating row {row} data: {row_data} inside SQlite database.")
             self.app_data.update_sqlite_data(row_data)
 
         self.app_data.commit_sqlite_all()

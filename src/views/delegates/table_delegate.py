@@ -16,10 +16,9 @@ class TableDelegate(QStyledItemDelegate):
         logging.debug(f"TableDelegate class constructor starting. Nothing in TableDelegate constructor.")
 
     def update_row_type_dict(self, model):
-        logging.debug(f"Updating row_type_dict in Delegate.")
         for row in range(model.rowCount()):
             try:
-                row_type = model.get_item(row, Columns.Type.value)
+                row_type = model.get_item_from_model(row, Columns.Type.value)
                 self.row_type_dict[row] = row_type
             except Exception as e:
                 logging.error(f"Error updating row type: {e}")

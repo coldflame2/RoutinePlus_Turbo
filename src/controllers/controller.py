@@ -12,22 +12,6 @@ class Controller:
 
         self.processor = Processor(model, table_view)
 
-    def _mapping(self):
-        action_map = {
-            'Save': self.save_all,
-            'Save As': self.save_as,
-            'New Task': self.new_task,
-            'New QuickTask': self.new_quick_task,
-            'Delete': self.delete_task,
-            'Testing': self.testing,
-            }  # Action:Method
-        return action_map
-
-    def signal_from_left_bar(self, action):
-        logging.debug(f"Catching Signal '{action}' emitted from MainWindow (originated:LeftBar).")
-        method_to_call = self.return_method_for_action(action)
-        method_to_call()
-
     def new_task(self):
         logging.debug("New Task requested in controller.")
         selected_row = self.processor.get_selected_row()
@@ -79,8 +63,16 @@ class Controller:
 
     def delete_task(self):
         logging.debug(f"'Delete Task' requested in controller.")
-        self.processor.remove_row_and_delete_data()
+        selected_row = self.processor.get_selected_row()
+        if self.processor.is_row_deletable(selected_row):
+            logging.debug(f"Selected row is valid. Selected row:{selected_row}")
 
+            try:
+                self.model.tasker_model.delete_row_and_data(selected_row)
+            except Exception as e:
+                logging.error(f"Exception type: (type{e}). Error:{e}")
+
+            self.processor.update_positions(selected_row)
     def save_all(self):
         logging.debug(f"Save data requested in controller.")
         self.model.save_to_database_file()
@@ -109,17 +101,18 @@ class Controller:
                     )
                 return None
 
+    def _mapping(self):
+        action_map = {
+            'Save': self.save_all,
+            'Save As': self.save_as,
+            'New Task': self.new_task,
+            'New QuickTask': self.new_quick_task,
+            'Delete': self.delete_task,
+            'Testing': self.testing,
+            }  # Action:Method
+        return action_map
 
-"""
-The Controller accepts input and converts it to commands for the Model or View. It acts as an intermediary between the Model and the View.
-
-The Controller sends commands to both the Model and the View. The Controller can call methods on the Model to update its state and on the View to change the presentation.
-
-Responsibilities of the Controller include:
-
-Input handling: Receiving input from the user and deciding what to do with it. 
-Model interaction: Sending commands to the Model to update the Model's state (e.g., editing a document). 
-View interaction: Sending commands to the View to change the View's presentation of the Model 
-(e.g., scrolling through a document).
-
-"""
+    def signal_from_left_bar(self, action):
+        logging.debug(f"Catching Signal '{action}' emitted from MainWindow (originated:LeftBar).")
+        method_to_call = self.return_method_for_action(action)
+        method_to_call()

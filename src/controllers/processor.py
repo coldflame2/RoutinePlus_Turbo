@@ -14,7 +14,7 @@ class Processor:
         logging.debug("Calculating new task data in TaskService.")
         # if selected task is QuickTask, get the first main task from above
         try:
-            if self.model.get_item(selected_row, Columns.Type.value) == 'QuickTask':
+            if self.model.get_item_from_model(selected_row, Columns.Type.value) == 'QuickTask':
                 logging.debug(f" -- Selected row = QuickTask. Retrieving first main task row index above.")
                 main_task_index = self.get_main_task_index(selected_row)
                 logging.debug(f" -- (Main task index:{main_task_index})")
@@ -23,8 +23,8 @@ class Processor:
                 logging.debug(f" -- Selected row = Main Task. Index:{main_task_index}")
 
             # Get EndTime and Position of the main task
-            end_main_task = self.model.get_item(main_task_index, Columns.EndTime.value)
-            position_main_task = self.model.get_item(main_task_index, Columns.Position.value)
+            end_main_task = self.model.get_item_from_model(main_task_index, Columns.EndTime.value)
+            position_main_task = self.model.get_item_from_model(main_task_index, Columns.Position.value)
 
             new_end_time = end_main_task + timedelta(minutes=10)
             new_reminder = end_main_task - timedelta(minutes=10)
@@ -56,15 +56,15 @@ class Processor:
         if not new_task_valid:
             return
 
-        clicked_row_type = self.model.get_item(clicked_row, Columns.Type.value)
+        clicked_row_type = self.model.get_item_from_model(clicked_row, Columns.Type.value)
         if clicked_row_type == 'QuickTask':
             main_task_index = self.get_main_task_index(clicked_row)
 
         replace_index = clicked_row + 1
 
         # Get data from the main task
-        end_main_task = self.model.get_item(main_task_index, Columns.EndTime.value)
-        position_main_task = self.model.get_item(main_task_index, Columns.Position.value)
+        end_main_task = self.model.get_item_from_model(main_task_index, Columns.EndTime.value)
+        position_main_task = self.model.get_item_from_model(main_task_index, Columns.Position.value)
 
         # Calculate data for the new QuickTask
         sequence_new = position_main_task + 1  # or any other logic you need
@@ -113,7 +113,7 @@ class Processor:
         logging.debug(f"Inserting new QuickTask at index:{replace_index}")
 
         # For QuickTask name in Columns.Name.value
-        selected_sequence = self.model.get_item(selected_row_index, column_key=Columns.Position.value)
+        selected_sequence = self.model.get_item_from_model(selected_row_index, column_key=Columns.Position.value)
         sequence_new = selected_sequence + 1
         task_serial = f'{sequence_new}{helper_fn.ordinal_suffix(sequence_new)}'  # Just for display
 
@@ -148,9 +148,9 @@ class Processor:
         row_to_delete = self.get_selected_row()
 
         try:
-            sequence = self.model.get_item(row_to_delete, Columns.Position.value)
-            task_name = self.model.get_item(row_to_delete, Columns.Name.value)
-            row_id = self.model.get_item(row_to_delete, Columns.ID.value)
+            sequence = self.model.get_item_from_model(row_to_delete, Columns.Position.value)
+            task_name = self.model.get_item_from_model(row_to_delete, Columns.Name.value)
+            row_id = self.model.get_item_from_model(row_to_delete, Columns.ID.value)
 
         except Exception as e:
             logging.error(f"Exception type:{type(e)}  (Error Description:{e}")
@@ -180,10 +180,10 @@ class Processor:
         logging.debug(f"Updating sequences of rows below row index:{starting_row}")
         for row in range(starting_row, self.model.rowCount()):
             col_key = Columns.Position.value
-            old_position = self.model.get_item(row, col_key)
+            old_position = self.model.get_item_from_model(row, col_key)
             new_position = old_position + 1
             try:
-                update_successful = self.model.set_item(row, col_key, new_position)
+                update_successful = self.model.set_item_to_model(row, col_key, new_position)
                 if not update_successful:
                     logging.error(f"Updating sequence for row:{row} failed.")
                     return False
@@ -193,9 +193,6 @@ class Processor:
                 return
 
         return True
-
-    def save_task(self, task_data):
-        pass
 
     def get_selected_row(self):
         selection_model = self.table_view.selectionModel()
@@ -214,7 +211,7 @@ class Processor:
         logging.debug(f" (Finding main task above the selected QuickTask.)")
 
         while clicked_row >= 0:
-            if self.model.get_item(clicked_row, Columns.Type.value) == 'main':
+            if self.model.get_item_from_model(clicked_row, Columns.Type.value) == 'main':
                 logging.debug(f" -- Main task found at row index: {clicked_row}")
                 break
             else:
@@ -241,8 +238,8 @@ class Processor:
         return True
 
     def is_valid_task_row(self, clicked_row):
-        clicked_row_type = self.model.get_item(clicked_row, Columns.Type.value)
-        row_below_type = self.model.get_item(clicked_row + 1, Columns.Type.value)
+        clicked_row_type = self.model.get_item_from_model(clicked_row, Columns.Type.value)
+        row_below_type = self.model.get_item_from_model(clicked_row + 1, Columns.Type.value)
 
         if clicked_row_type == 'QuickTask' and row_below_type == 'QuickTask':
             logging.debug(" -- Cannot add new row between QuickTasks.")
@@ -255,7 +252,7 @@ class Processor:
         logging.debug(f"Inserting new QuickTask at index:{replace_index}")
 
         # For QuickTask name in Columns.Name.value
-        selected_sequence = self.model.get_item(selected_row, column_key=Columns.Position.value)
+        selected_sequence = self.model.get_item_from_model(selected_row, column_key=Columns.Position.value)
 
         quick_task_data_to_insert = {
             Columns.ID.value: None,
@@ -269,3 +266,17 @@ class Processor:
         }
 
         return quick_task_data_to_insert
+
+    def is_row_deletable(self, selected_row):
+        if selected_row is None:
+            logging.debug(" -- No row selected.")
+            return False
+        if selected_row <= 0:
+            logging.debug(" -- Cannot delete the first row.")
+            return False
+        if selected_row == self.model.rowCount() - 1:
+            logging.debug(" -- Cannot delete the last row.")
+            return False
+
+        return True
+

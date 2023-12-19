@@ -31,17 +31,17 @@ class TaskerModel:
 
     def delete_row_and_data(self, row):
         logging.debug(f"Deleting row: '{row}'")
-        self.beginRemoveRows(QModelIndex(), row, row)
+        self.model.beginRemoveRows(QModelIndex(), row, row)
 
         try:
-            row_id = self._data[row]['id']  # Get the row ID before deleting
-            self._data.pop(row)  # Delete from model's database
-            self.app_data.delete_task(row_id)  # Delete from SQLite file using row ID
+            row_id = self.model.get_item_from_model(row, 'id')
+            self.model.delete_row_from_model(row)  # Delete from model
+            self.model.app_data.delete_task(row_id)  # Delete from SQLite file using row ID
 
         except Exception as e:
             logging.error(f"Exception type:{type(e)} when deleting row (Error Description:{e}")
             return False
 
-        self.endRemoveRows()
+        self.model.endRemoveRows()
         logging.debug(f"Row {row} deleted from model and SQLite database.")
         return True

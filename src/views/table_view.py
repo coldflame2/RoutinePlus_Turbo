@@ -95,7 +95,7 @@ class TableView(QTableView):
 
     def quick_tasks_set_span(self):
         for row in range(self.model().rowCount()):
-            task_type = self.model().get_item(row, Columns.Type.value)
+            task_type = self.model().get_item_from_model(row, Columns.Type.value)
 
             if task_type == 'QuickTask':
                 end_col_index = list(Columns).index(Columns.EndTime)
@@ -103,14 +103,12 @@ class TableView(QTableView):
                 # Last argument is number of columns to span (not the index to span till)
                 self.setSpan(row, end_col_index, 1, 3)
 
-
     def set_height(self):
         self.verticalHeader().setDefaultSectionSize(45)
-
         # Set the height of the rows
         for row in range(self.model().rowCount()):
-            if self.model().data(self.model().index(row, 6),
-                                 Qt.ItemDataRole.DisplayRole) == 'QuickTask':
+            task_type = self.model().get_item_from_model(row, Columns.Type.value)
+            if task_type == 'QuickTask':
                 self.setRowHeight(row, 30)
             else:
                 self.setRowHeight(row, 45)
