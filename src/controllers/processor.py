@@ -244,7 +244,7 @@ class Processor:
         clicked_row_type = self.model.get_item(clicked_row, Columns.Type.value)
         row_below_type = self.model.get_item(clicked_row + 1, Columns.Type.value)
 
-        if clicked_row_type and row_below_type == 'QuickTask':
+        if clicked_row_type == 'QuickTask' and row_below_type == 'QuickTask':
             logging.debug(" -- Cannot add new row between QuickTasks.")
             return False
 

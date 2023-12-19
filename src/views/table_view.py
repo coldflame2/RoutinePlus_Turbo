@@ -5,6 +5,7 @@ from PyQt6.QtGui import QPainter, QColor
 from PyQt6.QtWidgets import (
     QAbstractItemView, QTableView, QHeaderView)
 
+from resources.default import Columns
 from src.resources.styles import table_qss
 from src.views.delegates.table_delegate import TableDelegate
 
@@ -30,7 +31,7 @@ class TableView(QTableView):
         self.setItemDelegate(self.table_delegate)
 
         self.connect_model_signals()
-        self.set_span_for_QuickTasks()
+        self.quick_tasks_set_span()
 
         self.set_properties()
         self.set_height()
@@ -46,11 +47,18 @@ class TableView(QTableView):
         model.dataChanged.connect(self.set_height)
 
         model.rowsInserted.connect(lambda: self.table_delegate.update_row_type_dict(model))
-        model.rowsInserted.connect(self.set_span_for_QuickTasks)
+        model.rowsInserted.connect(self.quick_tasks_set_span)
         model.rowsRemoved.connect(lambda: self.table_delegate.update_row_type_dict(model))
         model.modelReset.connect(lambda: self.table_delegate.update_row_type_dict(model))
 
     def set_properties(self):
+        # Hide columns 0, 6, 7
+        self.setColumnHidden(0, True)
+        self.setColumnHidden(6, True)
+        self.setColumnHidden(7, True)
+
+
+
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked)
 
@@ -85,14 +93,15 @@ class TableView(QTableView):
         # I see no effects of these properties
         self.viewport().setAutoFillBackground(True)
 
-    def set_span_for_QuickTasks(self):
+    def quick_tasks_set_span(self):
         for row in range(self.model().rowCount()):
-            task_type = self.model().data(self.model().index(row, 6), Qt.ItemDataRole.DisplayRole)
+            task_type = self.model().get_item(row, Columns.Type.value)
 
             if task_type == 'QuickTask':
-                for column in range(self.model().columnCount()):
-                    # Span the cell at column 1 across multiple columns
-                    self.setSpan(row, 1, 1, 5)
+                end_col_index = list(Columns).index(Columns.EndTime)
+
+                # Last argument is number of columns to span (not the index to span till)
+                self.setSpan(row, end_col_index, 1, 3)
 
 
     def set_height(self):

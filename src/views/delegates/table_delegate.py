@@ -4,6 +4,7 @@ from PyQt6.QtCore import QModelIndex, QRect, Qt, QRectF
 from PyQt6.QtGui import QBrush, QColor, QFont, QPalette, QPainter, QPen
 from PyQt6.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate, QStyle, QLineEdit
 
+from resources.default import Columns
 from src.utils import helper_fn
 
 
@@ -18,7 +19,7 @@ class TableDelegate(QStyledItemDelegate):
         logging.debug(f"Updating row_type_dict in Delegate.")
         for row in range(model.rowCount()):
             try:
-                row_type = model.data(model.index(row, 6), Qt.ItemDataRole.DisplayRole)
+                row_type = model.get_item(row, Columns.Type.value)
                 self.row_type_dict[row] = row_type
             except Exception as e:
                 logging.error(f"Error updating row type: {e}")

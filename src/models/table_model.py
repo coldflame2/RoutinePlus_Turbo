@@ -139,15 +139,14 @@ class TableModel(QAbstractItemModel):
         column_key = self.column_keys[index.column()]
 
         if row_data.get(Columns.Type.value) == 'QuickTask':
-            # Return values for ID, type, and sequence
-            columns_only_in_dev = [Columns.ID.value, Columns.Type.value, Columns.Position.value]
-            if column_key in columns_only_in_dev:
-                value = row_data.get(column_key, None)
-                return value
-            else:
-                # Return name for all other fields like from, end, duration, etc.
-                QuickTask_name = row_data.get(Columns.Name.value, None)
-                return QuickTask_name
+            if column_key in Columns.EndTime.value:
+                quick_task_name = row_data.get(Columns.Name.value, None)
+                return quick_task_name
+            if column_key in Columns.StartTime.value:
+                return "Q.Task"
+            if column_key in Columns.Reminder.value:
+                return self._data[index.row()].get(Columns.Position.value, None)
+            return None
 
         time_col_keys = [Columns.StartTime.value, Columns.EndTime.value, Columns.Reminder.value]
         if column_key in time_col_keys:  # convert datetime to string for view
@@ -234,9 +233,9 @@ class TableModel(QAbstractItemModel):
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
-                # Return the visible header label for the given section (column index)
-                if 0 <= section < len(self.visible_headers):  # Section is like column index. 0 section means 'Start'
-                    return self.visible_headers[section]
+                if 0 <= section <= len(self.visible_headers):
+                    return self.visible_headers[section-1]
+
             elif orientation == Qt.Orientation.Vertical:
                 # Return the row number for the given section (row index)
                 return section + 1

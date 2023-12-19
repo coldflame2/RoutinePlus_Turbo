@@ -4,18 +4,25 @@ import sys
 from datetime import datetime
 from enum import Enum
 
-VISIBLE_HEADERS = ["id", "from", "end", "duration", "name", "reminders", "type", "seq"]
+VISIBLE_HEADERS = ["Start Time", "End Time", "Duration", "Task", "Remind Me"]
 
 
 class Columns(Enum):
-    ID = "id"
-    StartTime = "start_time"
-    EndTime = "end_time"
-    Duration = "duration"
-    Name = "task_name"
-    Reminder = "reminders"
-    Type = "type"
-    Position = "position"
+    """
+    Order of these columns is important. It is used in the model to get the data from the model.
+    """
+    ID = "id"  # 0, hidden
+
+    # Visible
+    StartTime = "start_time"  # 1
+    EndTime = "end_time"  # 2
+    Duration = "duration"  # 3
+    Name = "task_name"  # 4
+    Reminder = "reminders"  # 5
+
+    # Hidden
+    Type = "type"  # 6
+    Position = "position"  # 7
 
 
 # Constants
