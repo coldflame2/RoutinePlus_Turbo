@@ -1,6 +1,6 @@
 import logging
 
-from src.controllers.task_services import TaskService
+from controllers.processor import Processor
 
 
 class Controller:
@@ -8,43 +8,84 @@ class Controller:
         self.model = model
         self.table_view = table_view
 
-        self.action_map = self.mapping()
+        self.action_map = self._mapping()
 
-        self.task_service = TaskService(model, table_view)
+        self.processor = Processor(model, table_view)
 
-    def mapping(self):
-        map = {
-            'Save': self.process_saving_all,
-            'Save As': self.process_save_as,
-            'New Task': self.process_new_task,
-            'New QuickTask': self.process_new_QuickTask,
-            'Delete': self.process_delete_task,
+    def _mapping(self):
+        action_map = {
+            'Save': self.save_all,
+            'Save As': self.save_as,
+            'New Task': self.new_task,
+            'New QuickTask': self.new_quick_task,
+            'Delete': self.delete_task,
             'Testing': self.testing,
             }  # Action:Method
-        return map
+        return action_map
 
     def signal_from_left_bar(self, action):
         logging.debug(f"Catching Signal '{action}' emitted from MainWindow (originated:LeftBar).")
-        method_to_call = self._return_method_for_action(action)
+        method_to_call = self.return_method_for_action(action)
         method_to_call()
 
-    def process_new_task(self):
+    def new_task(self):
         logging.debug("New Task requested in controller.")
-        self.task_service.create_new_task()
+        selected_row = self.processor.get_selected_row()
+        if self.processor.is_valid_row(selected_row):
+            if self.processor.is_valid_task_row(selected_row):
+                logging.debug(f"Selected row ({selected_row}) is valid.")
 
-    def process_new_QuickTask(self):
+                try:
+                    new_task_data = self.processor.calculate_new_task_data(selected_row)
+                except Exception as e:
+                    logging.error(f"Error when calculating new task data. Exception type:{type(e)} Error:{e}")
+                    return
+
+                logging.debug(f"New task data calculated. Data:{new_task_data}")
+
+                if new_task_data:
+                    logging.debug(f"New task data calculated. Data:{new_task_data}")
+                    self.insert_and_update_positions(selected_row, new_task_data)
+
+    def new_quick_task(self):
         logging.debug("New QuickTask requested in controller.")
-        self.task_service.create_new_QuickTask()
+        selected_row = self.processor.get_selected_row()
+        if self.processor.is_valid_row(selected_row):
+            logging.debug(f"Selected row is valid. Selected row:{selected_row}")
 
-    def process_delete_task(self):
+            try:
+                new_quick_task_data = self.processor.calculate_new_quick_task_data(selected_row)
+            except Exception as e:
+                logging.error(f"Error when processing new QuickTask data. Exception type: {type(e)}. Error"
+                              f":{e}")
+                return
+
+            if new_quick_task_data:
+                logging.debug(f"New quick task data calculated. Data:{new_quick_task_data}")
+                self.insert_and_update_positions(selected_row, new_quick_task_data)
+
+    def insert_and_update_positions(self, selected_row, data_to_insert):
+        # Insert new row in the model with the data
+        try:
+            self.model.tasker_model.insert_new_task(selected_row + 1, data_to_insert)
+        except Exception as e:
+            logging.error(f"Exception type: (type{e}). Error:{e}")
+
+        # Update the positions of the rows below the new row
+        try:
+            self.processor.update_positions(selected_row + 1 + 1)  # +1 for the new row, +1 for the row below
+        except Exception as e:
+            logging.error(f"Exception type: (type{e}). Error:{e}")
+
+    def delete_task(self):
         logging.debug(f"'Delete Task' requested in controller.")
-        self.task_service.remove_row_and_delete_data()
+        self.processor.remove_row_and_delete_data()
 
-    def process_saving_all(self):
+    def save_all(self):
         logging.debug(f"Save data requested in controller.")
         self.model.save_to_database_file()
 
-    def process_save_as(self):
+    def save_as(self):
         logging.debug(f"'Save As' requested in controller. Not implemented yet")
 
     def data_changed(self, value):
@@ -55,7 +96,7 @@ class Controller:
         logging.debug(f"Testing. Action:'{action}' in Controller.")
         print(f"Testing. Action:'{action}' in Controller.")
 
-    def _return_method_for_action(self, action):
+    def return_method_for_action(self, action):
         if action in self.action_map:
             logging.debug(f"Action '{action}' found in action_map.")
             try:

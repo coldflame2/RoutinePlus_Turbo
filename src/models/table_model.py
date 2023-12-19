@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 
+from models.tasker_model import TaskerModel
 from src.models.app_data import AppData
 from src.resources.default import VISIBLE_HEADERS, Columns
 
@@ -14,6 +15,8 @@ class TableModel(QAbstractItemModel):
 
         self.visible_headers = VISIBLE_HEADERS  # Visible headers for UI
         self.column_keys = [column.value for column in Columns]
+
+        self.tasker_model = TaskerModel(self)
 
         self.initiate_data()
 
@@ -30,8 +33,9 @@ class TableModel(QAbstractItemModel):
 
     def get_item(self, row, column_key):
         try:
-            logging.debug(f"Retrieving '{column_key}' value at row index: {row}")
-            return self._data[row][column_key]
+            value = self._data[row][column_key]
+            logging.debug(f"Returning '{value}' for '{column_key}' in row {row}.")
+            return value
         except KeyError:
             logging.error(f"KeyError: Column key '{column_key}' not found in row {row}")
             return None
@@ -75,36 +79,36 @@ class TableModel(QAbstractItemModel):
             logging.error(f"Exception when updating row {row}, column '{column_key}': {e}")
             return False
 
-    def insert_new_row(self, index, data_to_insert):
-        self.beginInsertRows(QModelIndex(), index, index)
+    def set_row_data(self, row, data):
+        """
+        Updates the data for a specified row.
 
-        try:
-            self._data.insert(index, data_to_insert)  # Inset in model's database
+        Args:
+            row (int): The row index.
+            data (Dict[str, Any]): The new data to set.
 
-            # Set returned ID after the method to insert new row in sqlite file
-            self._data[index][Columns.ID.value] = self.app_data.insert_new_row(data_to_insert)
+        Returns:
+            bool: True if the update was successful, False otherwise.
+        """
 
-        except Exception as e:
-            logging.error(f"Exception type:{type(e)} when inserting new row (Error Description:{e}")
-
-        self.endInsertRows()
-
-    def delete_row_and_data(self, row):
-        logging.debug(f"Deleting row: '{row}'")
-        self.beginRemoveRows(QModelIndex(), row, row)
-
-        try:
-            row_id = self._data[row]['id']  # Get the row ID before deleting
-            self._data.pop(row)  # Delete from model's database
-            self.app_data.delete_task(row_id)  # Delete from SQLite file using row ID
-
-        except Exception as e:
-            logging.error(f"Exception type:{type(e)} when deleting row (Error Description:{e}")
+        if row < 0 or row >= len(self._data):
+            logging.error(f"IndexError: Row index {row} is out of range")
             return False
 
-        self.endRemoveRows()
-        logging.debug(f"Row {row} deleted from model and SQLite database.")
-        return True
+        if data is None:
+            logging.warning(f"Null value not allowed for row {row}")
+            return False
+
+        try:
+            self._data.insert(row, data)
+            self.dataChanged.emit(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+            self.layoutChanged.emit()
+
+            return True
+
+        except Exception as e:
+            logging.error(f"Exception when updating row {row}: {e}")
+            return False
 
     def save_to_database_file(self):
         logging.debug("Looping rows in model and calling update method in AppData.")
