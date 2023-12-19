@@ -1,15 +1,26 @@
 import logging
 import os
 import sys
-from aenum import Enum, NoAlias
 from datetime import datetime
+from enum import Enum
 
-COLUMN_KEYS = ["id", "from_time", "to_time", "duration", "task_name", "reminders", "type", "task_sequence"]
 VISIBLE_HEADERS = ["id", "from", "end", "duration", "name", "reminders", "type", "seq"]
+
+
+class Columns(Enum):
+    ID = "id"
+    StartTime = "start_time"
+    EndTime = "end_time"
+    Duration = "duration"
+    Name = "task_name"
+    Reminder = "reminders"
+    Type = "type"
+    Position = "position"
+
 
 # Constants
 DATE_FORMAT = "%I:%M %p, %Y-%m-%d"
-DATETIME_COLUMN_KEYS = ["from_time", "to_time"]
+DATETIME_COLUMN_KEYS = ["start_time", "end_time"]
 FIXED_DATE = "2023-01-01"
 
 
@@ -24,24 +35,24 @@ def convert_to_datetime(time_str):
 
 default_tasks = (
     {
-        'from_time': convert_to_datetime('12:00 AM'),
-        'to_time': convert_to_datetime('07:00 AM'),
-        'duration': 420,
-        'task_name': 'Sleep/Wake up',
-        'reminders': convert_to_datetime('12:00 AM'),
-        'type': 'main',
-        'task_sequence': 1
-        },
+        Columns.StartTime.value: convert_to_datetime('12:00 AM'),
+        Columns.EndTime.value: convert_to_datetime('07:00 AM'),
+        Columns.Duration.value: 420,
+        Columns.Name.value: 'Sleep/Wake up',
+        Columns.Reminder.value: convert_to_datetime('12:00 AM'),
+        Columns.Type.value: 'main',
+        Columns.Position.value: 1
+    },
     {
-        'from_time': convert_to_datetime('07:00 AM'),
-        'to_time': convert_to_datetime('12:00 AM'),
-        'duration': 1020,
-        'task_name': 'Sleep',
-        'reminders': convert_to_datetime('06:55 AM'),
-        'type': 'main',
-        'task_sequence': 2
-        }
-    )
+        Columns.StartTime.value: convert_to_datetime('07:00 AM'),
+        Columns.EndTime.value: convert_to_datetime('12:00 AM'),
+        Columns.Duration.value: 1020,
+        Columns.Name.value: 'Last',
+        Columns.Reminder.value: convert_to_datetime('07:00 AM'),
+        Columns.Type.value: 'main',
+        Columns.Position.value: 2
+    },
+)
 
 
 def resource_path(relative_path):
@@ -62,7 +73,7 @@ BUTTON_ICON_PATHS = {
     'Save As': resource_path('../assets/buttons_icons/saveas_icon.png'),
 
     'New Task': resource_path('../assets/buttons_icons/newtask_icon.png'),
-    'New Subtask': resource_path('../assets/buttons_icons/newsubtask_icon.png'),
+    'New QuickTask': resource_path('../assets/buttons_icons/newQuickTask_icon.png'),
     'Settings': resource_path('../assets/buttons_icons/settings_icon.png'),
 
     'Back up': resource_path('assets/buttons_icons/back_up_icon.png'),
@@ -72,34 +83,4 @@ BUTTON_ICON_PATHS = {
     'TEST': resource_path('assets/buttons_icons/test_icon.png'),
     'Exit': resource_path('assets/buttons_icons/exit_icon.png'),
     'Minimize to Tray': resource_path('assets/buttons_icons/minimize_to_tray.png'),
-    }
-
-
-class ColorsEn(Enum):
-    _settings_ = NoAlias
-    ROW_COLOR = "#DDEAF0"
-    ALT_ROW_COLOR = "#C4D0D5"
-    SUBTASK_ROW_COLOR = "#364135"
-    HEADERS_COLOR = "#36436A"
-    HEADERS_FONT_COLOR = "#DDEAF3"
-    CURRENT_ROW_COLOR = "#D7B1D9"
-
-
-class NumericEn(Enum):
-    _settings_ = NoAlias
-
-    FONT_SIZE = 11
-    SUBTASK_FONT_SIZE = 11
-    HEADERS_FONT_SIZE = 15
-    ROW_HEIGHT = 40
-    SUBTASK_HEIGHT = 25
-    REMINDER_LEAD_TIME = 5
-
-
-class BoolEn(Enum):
-    _settings_ = NoAlias
-
-    REMINDERS = True
-    EXIT_CONFIRM = True
-    AUTO_ROW_HEIGHT = False
-    AUTO_FONT = False
+}

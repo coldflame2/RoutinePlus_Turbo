@@ -81,7 +81,7 @@ def build():
     left_bar_icons_list = [
         'settings_icon.png',
         'minimizetotray_icon.png',
-        'newsubtask_icon.png',
+        'newQuickTask_icon.png',
         'newtask_icon.png',
         'open_icon.png',
         'save_icon.png',

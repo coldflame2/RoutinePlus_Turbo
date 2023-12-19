@@ -4,21 +4,21 @@ from datetime import timedelta
 
 class TimeCalculator:
 
-    def calculate_data(self, to_time_row_above, task_sequence_row_above):
+    def calculate_data(self, end_time_row_above, position_row_above):
         logging.debug(f"Calculating data to insert in new row.")
 
-        to_time = to_time_row_above + timedelta(minutes=10) if to_time_row_above else None
-        reminder = to_time_row_above - timedelta(minutes=5)
+        end_time = end_time_row_above + timedelta(minutes=10) if end_time_row_above else None
+        reminder = end_time_row_above - timedelta(minutes=5)
 
         data_to_insert = {
             'id': None,
-            'from_time': to_time_row_above,
-            'to_time': to_time,
+            'start_time': end_time_row_above,
+            'end_time': end_time,
             'duration': 10,
             'task_name': 'New Task',
             'reminders': reminder,
             'type': 'main',
-            'task_sequence': task_sequence_row_above + 1,
+            'position': position_row_above + 1,
             }
 
         return data_to_insert
@@ -59,7 +59,7 @@ class TimeCalculator:
 
         if original_duration != input_duration_int:  # If the input value is not equal to original
             if row == (len(self._data) - 1):
-                logging.debug(f"Row edited is the last row. Index:'{row}'. Setting 'Duration' and updating 'to_time'.")
+                logging.debug(f"Row edited is the last row. Index:'{row}'. Setting 'Duration' and updating 'end_time'.")
                 return self.on_duration_input_same_row(index, row, input_duration_int, role)
 
             else:
@@ -73,7 +73,7 @@ class TimeCalculator:
     def on_duration_input_same_row(self, index, row, input_duration_int, role):
 
         try:
-            original_from = self._data[row]['from_time']
+            original_from = self._data[row]['start_time']
             new_to = original_from + timedelta(minutes=input_duration_int)
 
         except Exception as e:
@@ -82,17 +82,17 @@ class TimeCalculator:
 
         try:
             self._data[row]['duration'] = input_duration_int  # Set the value to new_duration integer
-            self._data[row]['to_time'] = new_to  # Set the 'To' value to new calculated one
+            self._data[row]['end_time'] = new_to  # Set the 'To' value to new calculated one
 
         except Exception as e:
-            logging.error(f"Exception type:{type(e)} when setting input duration and calculated new 'to_time.' (Error Description:{e}")
+            logging.error(f"Exception type:{type(e)} when setting input duration and calculated new 'end_time.' (Error Description:{e}")
             return False
 
-        logging.debug(f"setData in 'duration'({input_duration_int} and 'to_time' {new_to}. Emitting dataChanged signals now.")
-        self.dataChanged.emit(index, index, [role])  # Emit for 'From_time'
+        logging.debug(f"setData in 'duration'({input_duration_int} and 'end_time' {new_to}. Emitting dataChanged signals now.")
+        self.dataChanged.emit(index, index, [role])  # Emit for 'start_time'
 
-        to_time_index = self.createIndex(row, 1)  # to_time column index = 1
-        self.dataChanged.emit(to_time_index, to_time_index, [role])  # Emit for 'to_time'
+        end_time_index = self.createIndex(row, 1)  # end_time column index = 1
+        self.dataChanged.emit(end_time_index, end_time_index, [role])  # Emit for 'end_time'
 
         return True
 
@@ -101,8 +101,8 @@ class TimeCalculator:
         focus_widget = QApplication.focusWidget()
 
         next_row = row + 1
-        original_from_next_row = self._data[next_row]['from_time']
-        original_to_next_row = self._data[next_row]['to_time']
+        original_from_next_row = self._data[next_row]['start_time']
+        original_to_next_row = self._data[next_row]['end_time']
         original_duration_next_row = self._data[next_row]['duration']
 
         logging.debug(
@@ -128,24 +128,24 @@ class TimeCalculator:
                 # "To Time" same row
 
                 # set
-                logging.debug(f"Setting new 'to_time' in the same row.")
-                original_from_same_row = self._data[row]['from_time']
+                logging.debug(f"Setting new 'end_time' in the same row.")
+                original_from_same_row = self._data[row]['start_time']
                 new_to_same_row = original_from_same_row + timedelta(minutes=input_duration_int)
-                self._data[row]['to_time'] = new_to_same_row
-                logging.debug(f"new 'to_time' same row:{new_to_same_row} set.")
+                self._data[row]['end_time'] = new_to_same_row
+                logging.debug(f"new 'end_time' same row:{new_to_same_row} set.")
 
                 # Emit
-                to_time_same_row_index = self.createIndex(row, 1)
-                self.dataChanged.emit(to_time_same_row_index, to_time_same_row_index, [role])
+                end_time_same_row_index = self.createIndex(row, 1)
+                self.dataChanged.emit(end_time_same_row_index, end_time_same_row_index, [role])
 
                 # "From Time" next row
 
                 # set
-                logging.debug(f"Setting new 'from_time' in the next row.")
-                self._data[next_row]['from_time'] = new_to_same_row  # set same as 'to_time' of row above
+                logging.debug(f"Setting new 'start_time' in the next row.")
+                self._data[next_row]['start_time'] = new_to_same_row  # set same as 'end_time' of row above
 
                 # Emit
-                logging.debug(f"Emitting dataChanged for 'from_time' in the next row.")
+                logging.debug(f"Emitting dataChanged for 'start_time' in the next row.")
                 new_from_next_row_index = self.createIndex(row, 0)
                 self.dataChanged.emit(new_from_next_row_index, new_from_next_row_index, [role])
 
@@ -153,7 +153,7 @@ class TimeCalculator:
 
                 # set
                 logging.debug(f"Setting new 'duration' in the next row.")
-                original_to_next_row = self._data[next_row]['to_time']
+                original_to_next_row = self._data[next_row]['end_time']
                 new_time_diff_next_row = (original_to_next_row - new_to_same_row)  # This is in timedelta
                 self._data[next_row]['duration'] = int(new_time_diff_next_row.total_seconds() / 60)
 
@@ -205,12 +205,12 @@ class TimeCalculator:
                 logging.debug(f"Same value in 'Duration'. Returning without any changes.")
                 return False
 
-        if column_key == 'from_time':
-            logging.debug(f"Change detected in 'from_time'. Input value:'{value}'")
+        if column_key == 'start_time':
+            logging.debug(f"Change detected in 'start_time'. Input value:'{value}'")
             return self.handle_from_input(row, value)
 
-        if column_key == 'to_time':
-            logging.debug(f"Change detected in 'to_time'. Input value:'{value}'")
+        if column_key == 'end_time':
+            logging.debug(f"Change detected in 'end_time'. Input value:'{value}'")
             return self.handle_to_input(row, value)
 
     def handle_from_input(self, row, user_input_value):
@@ -227,7 +227,7 @@ class TimeCalculator:
 
         try:
             input_from_dt = self.parse_datetime(user_input_value)
-            self._data[row]['from_time'] = input_from_dt
+            self._data[row]['start_time'] = input_from_dt
 
             return True
 
@@ -246,8 +246,8 @@ class TimeCalculator:
         focus_widget = QApplication.focusWidget()
 
         try:
-            input_to_time = self.parse_datetime(user_input_value)
-            self._data[row]['to_time'] = input_to_time
+            input_end_time = self.parse_datetime(user_input_value)
+            self._data[row]['end_time'] = input_end_time
             return True
 
         # Value isn't an integer

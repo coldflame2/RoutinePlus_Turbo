@@ -2,6 +2,7 @@ import logging
 import os
 import sqlite3
 
+from resources.default import Columns
 from src.resources import default
 from src.utils import helper_fn
 
@@ -41,13 +42,13 @@ class AppData:
         create_table_query = """
         CREATE TABLE IF NOT EXISTS daily_routine (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            from_time DATETIME,
-            to_time DATETIME,
+            start_time DATETIME,
+            end_time DATETIME,
             duration INTEGER,
             task_name TEXT,
             reminders DATETIME,
             type TEXT,
-            task_sequence INTEGER
+            position INTEGER
         )
         """
         self.conn.execute(create_table_query)
@@ -59,7 +60,7 @@ class AppData:
         """
         logging.debug(f"Fetching all entries from the SQLite database.")
 
-        select_query = "SELECT * FROM daily_routine ORDER BY task_sequence ASC"
+        select_query = "SELECT * FROM daily_routine ORDER BY position ASC"
         cursor = self.conn.execute(select_query)
 
         if len(cursor.fetchall()) == 0:
@@ -73,53 +74,75 @@ class AppData:
         cursor = self.conn.execute(select_query)
 
         formatted_data = []  # to store formatted data after converting string from database to datetime
-        for each_row_data in cursor.fetchall():
+        for row_data in cursor.fetchall():
             # check data type of each value in the row
 
-            if each_row_data['type'] == 'main':
-                logging.debug("row type is main")
-                each_row_data['from_time'] = helper_fn.string_to_datetime(each_row_data['from_time'])
-                each_row_data['to_time'] = helper_fn.string_to_datetime(each_row_data['to_time'])
-                each_row_data['reminders'] = helper_fn.string_to_datetime(each_row_data['reminders'])
-                formatted_data.append(each_row_data)
+            if row_data[Columns.Type.value] == 'main':
+                row_data[Columns.StartTime.value] = helper_fn.string_to_datetime(
+                    row_data[Columns.StartTime.value])
+
+                row_data[Columns.EndTime.value] = helper_fn.string_to_datetime(
+                    row_data[Columns.EndTime.value])
+                row_data[Columns.Reminder.value] = helper_fn.string_to_datetime(
+                    row_data[Columns.Reminder.value])
+
+                formatted_data.append(row_data)
 
             else:
-                logging.debug("row type is subtask")
-                formatted_data.append(each_row_data)
+                logging.debug("row type is QuickTask")
+                formatted_data.append(row_data)
 
         return formatted_data
 
     def insert_new_row(self, row_data):
         logging.debug(f"Inserting new task in the database.")
         insert_query = """
-        INSERT INTO daily_routine (from_time, to_time, duration, task_name, reminders, type, task_sequence)
+        INSERT INTO daily_routine (start_time, end_time, duration, task_name, reminders, type, position)
         VALUES (?, ?, ?, ?, ?, ?, ?)
         """
-        params = (row_data['from_time'], row_data['to_time'], row_data['duration'],
-                  row_data['task_name'], row_data['reminders'], row_data['type'],
-                  row_data['task_sequence'])
+        params = (row_data[Columns.StartTime.value], row_data[Columns.EndTime.value], row_data[Columns.Duration.value],
+                  row_data[Columns.Name.value], row_data[Columns.Reminder.value], row_data[Columns.Type.value],
+                  row_data[Columns.Position.value])
 
         cursor = self.conn.execute(insert_query, params)
-
         # Fetch the last inserted row ID
         inserted_row_id = cursor.lastrowid
 
         # Optionally, you can log the inserted row ID
-        logging.debug(f"Inserted new task with ID: {inserted_row_id}. Name:{row_data['task_name']}")
+        logging.debug(f"Inserted new task with ID: {inserted_row_id}. Name:{row_data[Columns.Name.value]}")
 
         return inserted_row_id
 
-    def update_sqlite_data(self, task_data):
-        logging.debug(f"Updating task in the database.")
+    def update_sqlite_data(self, row_data):
+        task_name = row_data[Columns.Name.value]
+        task_id = row_data[Columns.ID.value]
+        task_type = row_data[Columns.Type.value]
+        task_position = row_data[Columns.Position.value]
+
+        start_time = row_data[Columns.StartTime.value]
+        end_time = row_data[Columns.EndTime.value]
+        duration = row_data[Columns.Duration.value]
+        reminder = row_data[Columns.Reminder.value]
+
+        logging.debug(f"row_data - {row_data}")
+        logging.debug(f"Updating task 'Name:{task_name}' in the database. Task ID:{task_id}. Type"
+                      f":{task_type}. Position:{task_position}.")
+
         update_query = """
         UPDATE daily_routine
-        SET from_time = ?, to_time = ?, duration = ?, task_name = ?, reminders = ?, type = ?, task_sequence = ?
-        WHERE id = ?
+        SET start_time = :start_time, 
+            end_time = :end_time, 
+            duration = :duration, 
+            task_name = :task_name, 
+            reminders = :reminders, 
+            type = :type, 
+            position = :position
+        WHERE id = :id
         """
-        params = (task_data['from_time'], task_data['to_time'], task_data['duration'],
-                  task_data['task_name'], task_data['reminders'], task_data['type'],
-                  task_data['task_sequence'], task_data['id'])
-        self.conn.execute(update_query, params)
+        try:
+            self.conn.execute(update_query, row_data)
+        except Exception as e:
+            logging.error(f"Exception type: (type{e}). Error:{e}")
 
     def commit_sqlite_all(self):
         logging.debug(f"Committing all changes to the database.")

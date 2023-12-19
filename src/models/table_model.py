@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 
 from src.models.app_data import AppData
-from src.resources.default import COLUMN_KEYS, VISIBLE_HEADERS
+from src.resources.default import VISIBLE_HEADERS, Columns
 
 
 class TableModel(QAbstractItemModel):
@@ -13,8 +13,11 @@ class TableModel(QAbstractItemModel):
         super().__init__()
 
         self.visible_headers = VISIBLE_HEADERS  # Visible headers for UI
-        self.column_keys = COLUMN_KEYS  # Keys (str) used internally
+        self.column_keys = [column.value for column in Columns]
 
+        self.initiate_data()
+
+    def initiate_data(self):
         self.app_data = AppData()
 
         try:
@@ -25,71 +28,66 @@ class TableModel(QAbstractItemModel):
             self.app_data.close()  # Close the database connection on failure
             raise  # Re-raise the exception to signal the failure
 
-    def get_row_data(self, row, column_key=None):
-        if column_key is None:
-            logging.debug(f"Returning entire row data for row:'{row}'")
-            return self._data[row]
-        else:
-            logging.debug(f"Returning {column_key}'s value: ('{self._data[row][column_key]}') at row index:{row}")
+    def get_item(self, row, column_key):
+        try:
+            logging.debug(f"Retrieving '{column_key}' value at row index: {row}")
             return self._data[row][column_key]
+        except KeyError:
+            logging.error(f"KeyError: Column key '{column_key}' not found in row {row}")
+            return None
+        except IndexError:
+            logging.error(f"IndexError: Row index {row} is out of range")
+            return None
+
+    def set_item(self, row, column_key, value):
+        """
+        Updates the value for a specified row and column.
+
+        Args:
+            row (int): The row index.
+            column_key (str): The key for the column.
+            value (Any): The new value to set.
+
+        Returns:
+            bool: True if the update was successful, False otherwise.
+        """
+
+        if row < 0 or row >= len(self._data):
+            logging.error(f"IndexError: Row index {row} is out of range")
+            return False
+
+        if column_key not in self.column_keys:
+            logging.error(f"KeyError: Column key '{column_key}' is invalid")
+            return False
+
+        if value is None:
+            logging.warning(f"Null value not allowed for row {row}, column '{column_key}'")
+            return False
+
+        try:
+            self._data[row][column_key] = value
+            column_index = self.column_keys.index(column_key)
+            item_index = self.createIndex(row, column_index)
+            self.dataChanged.emit(item_index, item_index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+            logging.debug(f"Updated row {row}, column '{column_key}' with value '{value}'")
+            return True
+        except Exception as e:
+            logging.error(f"Exception when updating row {row}, column '{column_key}': {e}")
+            return False
 
     def insert_new_row(self, index, data_to_insert):
         self.beginInsertRows(QModelIndex(), index, index)
 
         try:
             self._data.insert(index, data_to_insert)  # Inset in model's database
-            self._data[index]['id'] = self.app_data.insert_new_row(data_to_insert)  # Insert in SQLite file and set ID
+
+            # Set returned ID after the method to insert new row in sqlite file
+            self._data[index][Columns.ID.value] = self.app_data.insert_new_row(data_to_insert)
 
         except Exception as e:
             logging.error(f"Exception type:{type(e)} when inserting new row (Error Description:{e}")
 
         self.endInsertRows()
-
-    def set_row_data(
-            self, row,
-            new_from=None, new_to=None,
-            new_duration=None, new_type=None,
-            new_task_sequence=None
-    ):
-
-        if 0 <= row < self.rowCount():
-            changed_indices = []
-
-            if new_from is not None:
-                logging.debug("Updating 'from_time'")
-                self._data[row]['from_time'] = new_from
-                from_col_index = self.createIndex(row, 0)  # Assuming 'from_time' is in column 0
-                changed_indices.append(from_col_index)
-
-            if new_to is not None:
-                logging.debug("Updating 'to_time'")
-                self._data[row]['to_time'] = new_to
-                to_col_index = self.createIndex(row, 1)
-                changed_indices.append(to_col_index)
-
-            if new_duration is not None:
-                logging.debug("Updating 'duration'")
-                self._data[row]['duration'] = new_duration
-                dur_col_index = self.createIndex(row, 1)  # Assuming 'duration' is in column 1
-                changed_indices.append(dur_col_index)
-
-            if new_type is not None:
-                logging.debug("Updating 'type'")
-                self._data[row]['type'] = new_type
-                type_col_index = self.createIndex(row, 2)
-                changed_indices.append(type_col_index)
-
-            if new_task_sequence is not None:
-                logging.debug("Updating 'task_sequence'")
-                self._data[row]['task_sequence'] = new_task_sequence
-                seq_col_index = self.createIndex(row, 2)  # Assuming 'task_sequence' is in column 2
-                changed_indices.append(seq_col_index)
-
-            # Notify views of data changes
-            for index in changed_indices:
-                self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
-
-            logging.debug("Values updated and dataChanged emitted.")
 
     def delete_row_and_data(self, row):
         logging.debug(f"Deleting row: '{row}'")
@@ -109,15 +107,19 @@ class TableModel(QAbstractItemModel):
         return True
 
     def save_to_database_file(self):
-        logging.debug(f"Looping rows in model and calling update or insert in AppData.")
-        print(self.rowCount())
+        logging.debug("Looping rows in model and calling update method in AppData.")
 
         for row in range(self.rowCount()):
-            row_data = self.get_row_data(row)
+            row_data = {}
+            for column_key in self.column_keys:
+                row_data[column_key] = self._data[row][column_key]
+                logging.debug(f" -- Collecting data: {column_key} = {self._data[row][column_key]}.")
+
+            logging.debug(f" -- Updating row {row} data: {row_data} inside SQlite database.")
             self.app_data.update_sqlite_data(row_data)
 
         self.app_data.commit_sqlite_all()
-        logging.debug(f"Saving to database file. {self._data}")
+        logging.debug("SUCCESS: Date updated and saved on SQLite database file.")
 
     def close_database(self):
         logging.debug("Closing the database.")
@@ -125,11 +127,6 @@ class TableModel(QAbstractItemModel):
         logging.debug("Database closed.")
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        """
-        This method is called by the view to retrieve the data for a given index. The role parameter
-        specifies what kind of data is being requested (e.g., display data, tooltip data). It doesn't
-        change data.
-        """
 
         if not index.isValid() or role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return None
@@ -137,30 +134,35 @@ class TableModel(QAbstractItemModel):
         row_data = self._data[index.row()]
         column_key = self.column_keys[index.column()]
 
-        if row_data.get('type') == 'subtask':
-            if column_key in ['id', 'type', 'task_name', 'type', 'task_sequence']:
+        if row_data.get(Columns.Type.value) == 'QuickTask':
+            # Return values for ID, type, and sequence
+            columns_only_in_dev = [Columns.ID.value, Columns.Type.value, Columns.Position.value]
+            if column_key in columns_only_in_dev:
                 value = row_data.get(column_key, None)
                 return value
             else:
-                subtask_name = row_data.get('task_name', None)
-                return subtask_name
+                # Return name for all other fields like from, end, duration, etc.
+                QuickTask_name = row_data.get(Columns.Name.value, None)
+                return QuickTask_name
 
-        if column_key in ["from_time", "to_time", "reminders"]:  # convert datetime to string for view
+        time_col_keys = [Columns.StartTime.value, Columns.EndTime.value, Columns.Reminder.value]
+        if column_key in time_col_keys:  # convert datetime to string for view
             datetime_value = row_data.get(column_key, None)
+
             if datetime_value:
                 try:
-                    return_datetime_string = datetime_value.strftime(
-                        "%I:%M %p")  # Datetime is converted to string for view
+                    return_datetime_string = datetime_value.strftime("%I:%M %p")  # Datetime is converted to string for view
                     return return_datetime_string
 
                 except Exception as e:
+                    print(f"datetime value:{datetime_value}")
                     logging.error(f"Exception type:{type(e)}  (Error Description:{e}")
                     return None
 
             else:
                 return None
 
-        if column_key in ["duration"]:  # convert duration integer to string and add "minutes"
+        if column_key in Columns.Duration.value:  # convert duration integer to string and add "minutes"
             duration_value = row_data.get(column_key, None)
             if duration_value:
                 if isinstance(duration_value, int):
@@ -186,14 +188,19 @@ class TableModel(QAbstractItemModel):
         row = index.row()
         column_key = self.column_keys[index.column()]
 
-        if column_key in ['task_name']:
+        if column_key == Columns.Name.value:
             return self.handle_task_name_input(index, row, value, role)
 
-        if column_key in ['duration']:
+        if column_key == Columns.Duration.value:
             return self.handle_duration_input(index, row, value, role)
 
-        if column_key in ["from_time", "to_time"]:
+        if column_key in [Columns.StartTime.value, Columns.EndTime.value, Columns.Reminder.value]:
             return self.handle_time_inputs(value, row, column_key)
+
+        col_keys_only_dev = [Columns.ID.value, Columns.Type.value, Columns.Position.value]
+        if column_key in col_keys_only_dev:
+            logging.debug(f"Not supposed to change these columns' data by UI interaction.")
+            return False
 
     def handle_task_name_input(self, index, row, value, role):
         self._data[row]['task_name'] = value
@@ -203,7 +210,7 @@ class TableModel(QAbstractItemModel):
     def handle_duration_input(self, index, row, value, role):
         try:
             new_duration = int(value)
-            self._data[row]['duration'] = new_duration
+            self._data[row][Columns.Duration.value] = new_duration
             self.dataChanged.emit(index, index, [role])
             return True
         except ValueError:
@@ -218,15 +225,9 @@ class TableModel(QAbstractItemModel):
             return True
         except ValueError:
             logging.error(f" VALUE ERROR with new input value {value} in r:c={row}:{column_key}")
-        return False
+            return False
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-        """
-        This method provides the data for the header given the section (which is the column index for horizontal headers and row index for vertical headers), the orientation (horizontal or vertical), and the role.
-
-        The view calls this method to get the text that should be displayed in the header of a particular column or row.
-        """
-
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 # Return the visible header label for the given section (column index)
@@ -235,7 +236,6 @@ class TableModel(QAbstractItemModel):
             elif orientation == Qt.Orientation.Vertical:
                 # Return the row number for the given section (row index)
                 return section + 1
-
         return None
 
     def flags(self, index):
@@ -249,15 +249,15 @@ class TableModel(QAbstractItemModel):
 
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
+
         return super().flags(index) | Qt.ItemFlag.ItemIsEditable
 
     def index(self, row, column, parent=QModelIndex()):
-        """When the view requests the data for a cell at a particular row and column, it calls this method to get an index that points to that cell's data."""
         if parent.isValid() or row >= len(self._data) or column >= len(self.column_keys):
             return QModelIndex()
         return self.createIndex(row, column, self._data[row])
 
-    def parent(self, index):  # used for hierarchical models (ignored for models like table)
+    def parent(self, index):
         return QModelIndex()
 
     def rowCount(self, parent=QModelIndex()):

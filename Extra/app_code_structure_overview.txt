@@ -3,7 +3,7 @@ This app is called 'Routine Plus Turbo' and is a GUI app for Windows intended to
  The app is built upon PyQt6 bindings and the architecture is model-view-controller (MVC).
 
 It shows a table of the routine, where each row represents a task with start, end, duration, name, and reminder value.
-Hidden columns for internal use are also present. They are: id, type, task_sequence.
+Hidden columns for internal use are also present. They are: id, type, position.
 
 The first cell of first row represents midnight and "from" or "end" cell of the last row represents end of the day (again midnight).
 

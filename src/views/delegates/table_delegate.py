@@ -70,7 +70,7 @@ class TableDelegate(QStyledItemDelegate):
             fill_rect = helper_fn.add_padding(option.rect, 1, 5, 0, 1)
 
         else:  # For other rows
-            if self.row_type_dict.get(index.row()) == 'subtask':  # Subtask rows
+            if self.row_type_dict.get(index.row()) == 'QuickTask':  # QuickTask rows
                 color = '#CCE0FA'
                 fill_rect = helper_fn.add_padding(option.rect, 1, 1, 0, 0)
             else:  # Main task rows
@@ -80,10 +80,10 @@ class TableDelegate(QStyledItemDelegate):
         self.fill_rect_with_color(painter, option, fill_rect, color)
 
         type_previous = self.row_type_dict.get(index.row() - 1)
-        if self.row_type_dict.get(index.row()) == 'subtask' and type_previous == 'main':
-            self.draw_line_for_subtask(painter, option)
+        if self.row_type_dict.get(index.row()) == 'QuickTask' and type_previous == 'main':
+            self.draw_line_for_QuickTask(painter, option)
 
-    def draw_line_for_subtask(self, painter, option):
+    def draw_line_for_QuickTask(self, painter, option):
         line_rect = helper_fn.add_padding(option.rect, 1, 1, 0, 0)
         painter.save()
         pen = QPen(QColor("#A9BCD5"))

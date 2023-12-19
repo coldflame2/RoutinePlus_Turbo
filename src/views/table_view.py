@@ -30,7 +30,7 @@ class TableView(QTableView):
         self.setItemDelegate(self.table_delegate)
 
         self.connect_model_signals()
-        self.set_span_for_subtasks()
+        self.set_span_for_QuickTasks()
 
         self.set_properties()
         self.set_height()
@@ -46,7 +46,7 @@ class TableView(QTableView):
         model.dataChanged.connect(self.set_height)
 
         model.rowsInserted.connect(lambda: self.table_delegate.update_row_type_dict(model))
-        model.rowsInserted.connect(self.set_span_for_subtasks)
+        model.rowsInserted.connect(self.set_span_for_QuickTasks)
         model.rowsRemoved.connect(lambda: self.table_delegate.update_row_type_dict(model))
         model.modelReset.connect(lambda: self.table_delegate.update_row_type_dict(model))
 
@@ -85,11 +85,11 @@ class TableView(QTableView):
         # I see no effects of these properties
         self.viewport().setAutoFillBackground(True)
 
-    def set_span_for_subtasks(self):
+    def set_span_for_QuickTasks(self):
         for row in range(self.model().rowCount()):
             task_type = self.model().data(self.model().index(row, 6), Qt.ItemDataRole.DisplayRole)
 
-            if task_type == 'subtask':
+            if task_type == 'QuickTask':
                 for column in range(self.model().columnCount()):
                     # Span the cell at column 1 across multiple columns
                     self.setSpan(row, 1, 1, 5)
@@ -101,7 +101,7 @@ class TableView(QTableView):
         # Set the height of the rows
         for row in range(self.model().rowCount()):
             if self.model().data(self.model().index(row, 6),
-                                 Qt.ItemDataRole.DisplayRole) == 'subtask':
+                                 Qt.ItemDataRole.DisplayRole) == 'QuickTask':
                 self.setRowHeight(row, 30)
             else:
                 self.setRowHeight(row, 45)
@@ -114,7 +114,7 @@ class TableView(QTableView):
     def adjust_col_widths(self):
         task_type = self.model().data(self.model().index(0, 6), Qt.ItemDataRole.DisplayRole)
 
-        if task_type == 'subtask':
+        if task_type == 'QuickTask':
             return
 
         headers = self.horizontalHeader()

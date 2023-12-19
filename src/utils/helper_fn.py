@@ -107,27 +107,27 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-def calculate_duration(from_time, to_time):
-    """Calculate duration between from_time and to_time in minutes."""
-    if from_time and to_time:
-        duration = (to_time - from_time).total_seconds() / 60
+def calculate_duration(start_time, end_time):
+    """Calculate duration between start_time and end_time in minutes."""
+    if start_time and end_time:
+        duration = (end_time - start_time).total_seconds() / 60
         return int(duration)  # Return duration as integer minutes
     return 0
 
 
-def calculate_to_time(from_time, duration):
-    """Calculate to_time based on from_time and duration."""
-    if from_time and duration:
-        to_time = from_time + timedelta(minutes=duration)
-        return to_time
-    return from_time
+def calculate_end_time(start_time, duration):
+    """Calculate end_time based on start_time and duration."""
+    if start_time and duration:
+        end_time = start_time + timedelta(minutes=duration)
+        return end_time
+    return start_time
 
 
-def calculate_from_time(to_time, duration):
-    if to_time and duration:
-        from_time = to_time - timedelta(minutes=duration)
-        return from_time
-    return to_time
+def calculate_start_time(end_time, duration):
+    if end_time and duration:
+        start_time = end_time - timedelta(minutes=duration)
+        return start_time
+    return end_time
 
 
 def add_padding(rect, left, top, right, bottom):

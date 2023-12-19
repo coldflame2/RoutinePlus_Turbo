@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-from src.controllers.time_calculator import TimeCalculator
+from resources.default import Columns
 from utils import helper_fn
 
 
@@ -9,91 +9,92 @@ class TaskService:
     def __init__(self, model, table_view):
         self.model = model
         self.table_view = table_view
-        self.time_calculator = TimeCalculator()
 
     def create_new_task(self):
         logging.debug("Executing New Task Request in TaskService.")
-        selected_index = self.get_selected_index()
+        clicked_row = self.get_selected_index()
 
-        if selected_index is None:
-            logging.debug(f"No row selected.")
-            return
-        if selected_index == self.model.rowCount() - 1:
-            logging.debug(f"Cannot add new row below the last row.")
+        new_task_valid = self.is_new_task_valid(clicked_row)
+        if not new_task_valid:
             return
 
-        replace_index = selected_index + 1
+        main_task_index = self.get_main_task_index(clicked_row)
 
-        logging.debug(f"Inserting new row at index:{replace_index}")
+        replace_index = clicked_row + 1
 
-        # Crucial to get this before inserting new row (For updating)
-        last_duration_original = self.model.get_row_data(replace_index, 'duration')
+        # Get data from the main task
+        end_main_task = self.model.get_item(main_task_index, Columns.EndTime.value)
+        position_main_task = self.model.get_item(main_task_index, Columns.Position.value)
 
-        # Get data of row above
-        to_time_row_above = self.model.get_row_data(selected_index, 'to_time')
-        task_sequence_row_above = self.model.get_row_data(selected_index, 'task_sequence')
-
-        # For subtask name in 'task_name'
-        sequence_new = task_sequence_row_above + 1
+        # Calculate data for the new QuickTask
+        sequence_new = position_main_task + 1  # or any other logic you need
         ordinal_suffix_for_new = helper_fn.ordinal_suffix(sequence_new)
+        end_new = end_main_task + timedelta(minutes=10)
+        reminder_new = end_main_task - timedelta(minutes=5)
 
-        to_time = to_time_row_above + timedelta(minutes=10)
-        reminder = to_time_row_above - timedelta(minutes=5)
-
+        # Prepare data for the new QuickTask
         data_to_insert = {
-            'id': None,
-            'from_time': to_time_row_above,
-            'to_time': to_time,
-            'duration': 10,
-            'task_name': f'New Task. {sequence_new}{ordinal_suffix_for_new} row. Index:{replace_index}. '
-                         f'sequence:{sequence_new}',
-            'reminders': reminder,
-            'type': 'main',
-            'task_sequence': sequence_new,
+            Columns.ID.value: None,
+            Columns.StartTime.value: end_main_task,
+            Columns.EndTime.value: end_new,
+            Columns.Duration.value: 10,
+            Columns.Name.value: f'New QuickTask. {sequence_new}{ordinal_suffix_for_new} row. Index: {replace_index}. sequence: {sequence_new}',
+            Columns.Reminder.value: reminder_new,
+            Columns.Type.value: 'main',  # Set as 'QuickTask' since it's inserted under a QuickTask
+            Columns.Position.value: sequence_new,
         }
 
-        self.model.insert_new_row(replace_index, data_to_insert)  # Insert new row
+        try:
+            self.model.insert_new_row(replace_index, data_to_insert)  # Insert new QuickTask row
+        except Exception as e:
+            logging.error(f"Exception type: {type(e).__name__}. Error: {e}")
 
-        logging.debug(f"New Task inserted. Updating last task from and duration.")
+        # Update positions for rows below the new QuickTask
+        update_success = self.update_positions(replace_index)
 
-        self.update_sequences_below_row(replace_index)  # Update task sequences
+        if update_success:
+            logging.debug(" -- Updating sequences of rows below successful.")
+        else:
+            logging.error("Updating sequences of rows below failed.")
 
-    def create_new_subtask(self):
-        logging.debug("Executing New Subtask Request in TaskService.")
+        logging.debug(f"SUCCESS - New Task: New QuickTask inserted at index: {replace_index}.")
+
+    def create_new_QuickTask(self):
+        logging.debug("Executing New QuickTask Request in TaskService.")
         selected_row_index = self.get_selected_index()
         if selected_row_index is None:
             logging.debug(f"No row selected. Returning.")
             return
         if selected_row_index == self.model.rowCount() - 1:
-            logging.debug(f"Last row cannot be a subtask. Returning.")
+            logging.debug(f"Last row cannot be a QuickTask. Returning.")
             return
 
         replace_index = selected_row_index + 1
-        logging.debug(f"Inserting new subtask at index:{replace_index}")
+        logging.debug(f"Inserting new QuickTask at index:{replace_index}")
 
-        # For subtask name in 'task_name'
-        selected_sequence = self.model.get_row_data(selected_row_index, column_key='task_sequence')
+        # For QuickTask name in Columns.Name.value
+        selected_sequence = self.model.get_item(selected_row_index, column_key=Columns.Position.value)
         sequence_new = selected_sequence + 1
         task_serial = f'{sequence_new}{helper_fn.ordinal_suffix(sequence_new)}'  # Just for display
 
-        subtask_data_to_insert = {
-            'id': None,
-            'from_time': None,
-            'to_time': None,
-            'duration': None,
-            'task_name': f'New Subtask. {task_serial}',
-            'reminders': None,
-            'type': 'subtask',
-            'task_sequence': sequence_new,
+        QuickTask_data_to_insert = {
+            Columns.ID.value: None,
+            Columns.StartTime.value: None,
+            Columns.EndTime.value: None,
+            Columns.Duration.value: None,
+            Columns.Name.value: f'New QuickTask. {task_serial}',
+            Columns.Reminder.value: None,
+            Columns.Type.value: 'QuickTask',
+            Columns.Position.value: sequence_new,
         }
 
         logging.debug(f"replace_index:{replace_index}, selected_sequence:{selected_sequence},"
                       f"sequence_new:{sequence_new}, "
                       f" ordinal_suffix{task_serial}")
 
-        self.model.insert_new_row(replace_index, subtask_data_to_insert)
+        self.model.insert_new_row(replace_index, QuickTask_data_to_insert)
 
-        self.update_sequences_below_row(replace_index)
+        self.update_positions(replace_index)
 
     def remove_row_and_delete_data(self):
         logging.debug(f"Remove and Delete executing in TaskServices.")
@@ -107,9 +108,9 @@ class TaskService:
         row_to_delete = self.get_selected_index()
 
         try:
-            sequence = self.model.get_row_data(row_to_delete, 'task_sequence')
-            task_name = self.model.get_row_data(row_to_delete, 'task_name')
-            row_id = self.model.get_row_data(row_to_delete, 'id')
+            sequence = self.model.get_item(row_to_delete, Columns.Position.value)
+            task_name = self.model.get_item(row_to_delete, Columns.Name.value)
+            row_id = self.model.get_item(row_to_delete, Columns.ID.value)
 
         except Exception as e:
             logging.error(f"Exception type:{type(e)}  (Error Description:{e}")
@@ -133,12 +134,26 @@ class TaskService:
                 logging.debug(f"Row deleted successfully. Updating task sequences")
 
                 # update task sequences of all rows below the deleted row
-                self.update_sequences_below_row(row_to_delete)
+                self.update_positions(row_to_delete)
 
-    def update_sequences_below_row(self, row_index):
+    def update_positions(self, row_index):
+        row_below = row_index + 1
         for row in range(row_index, self.model.rowCount()):
-            logging.debug(f"Updating sequence for row:{row}. Sequence:{row + 1}")
-            self.model.set_row_data(row, new_task_sequence=row + 1)
+            logging.debug(f"  (Updating position for row:{row} to {row + 1})")
+            col_key = Columns.Position.value
+            old_position = self.model.get_item(row, col_key)
+            new_position = old_position + 1
+            try:
+                update_successful = self.model.set_item(row, col_key, new_position)
+                if not update_successful:
+                    logging.error(f"Updating sequence for row:{row} failed.")
+                    return False
+
+            except Exception as e:
+                logging.error(f"Exception type:{type(e)}  (Error Description:{e}")
+                return
+
+        return True
 
     def get_selected_index(self):
         selection_model = self.table_view.selectionModel()
@@ -148,9 +163,36 @@ class TaskService:
             logging.debug(f"No row selected. Return.")
             return None
 
-        selected_row_index = selected_row_indices[0].row()
-        logging.debug(f"Selected row index:{selected_row_index}")
-        return selected_row_index
+        selected_row = selected_row_indices[0].row()
+        logging.debug(f" (Selected row index:{selected_row})")
+        return selected_row
+
+    def is_new_task_valid(self, clicked_row):
+        if clicked_row is None:
+            logging.debug(" -- No row selected.")
+            return False
+        if clicked_row == self.model.rowCount() - 1:
+            logging.debug(" -- Cannot add new row below the last row.")
+            return False
+
+        return True
 
     def save_task(self, task_data):
         pass
+
+    def get_main_task_index(self, clicked_row):
+        # Find the main task associated with the selected QuickTask
+        logging.debug(f" (Finding main task above the selected QuickTask.)")
+        while clicked_row >= 0:
+            if self.model.get_item(clicked_row, Columns.Type.value) == 'main':
+                logging.debug(f" -- Main task found at row index: {clicked_row}")
+                break
+            else:
+                clicked_row -= 1
+
+        # If no main task found, abort the operation
+        if clicked_row < 0:
+            logging.error(" -- No main task found above the selected QuickTask.")
+            return None
+
+        return clicked_row

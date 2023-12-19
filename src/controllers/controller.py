@@ -15,9 +15,9 @@ class Controller:
     def mapping(self):
         map = {
             'Save': self.process_saving_all,
-            'Save As': self.save_as,
+            'Save As': self.process_save_as,
             'New Task': self.process_new_task,
-            'New Subtask': self.process_new_subtask,
+            'New QuickTask': self.process_new_QuickTask,
             'Delete': self.process_delete_task,
             'Testing': self.testing,
             }  # Action:Method
@@ -32,9 +32,9 @@ class Controller:
         logging.debug("New Task requested in controller.")
         self.task_service.create_new_task()
 
-    def process_new_subtask(self):
-        logging.debug("New Subtask requested in controller.")
-        self.task_service.create_new_subtask()
+    def process_new_QuickTask(self):
+        logging.debug("New QuickTask requested in controller.")
+        self.task_service.create_new_QuickTask()
 
     def process_delete_task(self):
         logging.debug(f"'Delete Task' requested in controller.")
@@ -44,7 +44,7 @@ class Controller:
         logging.debug(f"Save data requested in controller.")
         self.model.save_to_database_file()
 
-    def save_as(self):
+    def process_save_as(self):
         logging.debug(f"'Save As' requested in controller. Not implemented yet")
 
     def data_changed(self, value):
