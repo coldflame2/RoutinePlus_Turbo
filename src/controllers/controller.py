@@ -1,5 +1,7 @@
 import logging
 
+from PyQt6.QtCore import QTimer
+
 from controllers.processor import Processor
 
 
@@ -75,20 +77,13 @@ class Controller:
                 logging.error(f"Exception type: (type{e}). Error:{e}")
 
             self.processor.update_positions(selected_row, 'delete')
+
     def save_all(self):
         logging.debug(f"Save data requested in controller.")
         self.model.save_to_database_file()
 
     def save_as(self):
         logging.debug(f"'Save As' requested in controller. Not implemented yet")
-
-    def data_changed(self, value):
-        logging.debug(f"data_changed. Value:'{value}'")
-        self.table_view.update()
-
-    def testing(self, action):
-        logging.debug(f"Testing. Action:'{action}' in Controller.")
-        print(f"Testing. Action:'{action}' in Controller.")
 
     def return_method_for_action(self, action):
         if action in self.action_map:
@@ -118,3 +113,10 @@ class Controller:
         logging.debug(f"Catching Signal '{action}' emitted from MainWindow (originated:LeftBar).")
         method_to_call = self.return_method_for_action(action)
         method_to_call()
+
+
+    def testing(self):
+        logging.debug(f"Testing. Controller.")
+        print(f"Testing.")
+        self.table_view.hide()
+        QTimer.singleShot(1000, lambda: self.table_view.show())

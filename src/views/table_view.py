@@ -52,46 +52,15 @@ class TableView(QTableView):
         model.modelReset.connect(lambda: self.table_delegate.update_row_type_dict(model))
 
     def set_properties(self):
-        # Hide columns 0, 6, 7
-        self.setColumnHidden(0, True)
-        self.setColumnHidden(6, True)
-        self.setColumnHidden(7, True)
+        # Hide columns ID, Type, and Position
+        for col_index in (0, 6, 7):
+            self.setColumnHidden(col_index, True)
 
-
-
-        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked)
+        self.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked |
+                             QAbstractItemView.EditTrigger.AnyKeyPressed)
 
         self.setMouseTracking(True)
         self.setShowGrid(False)
-        self.setFrameStyle(0)  # No frame
-
-        self.horizontalHeader().setVisible(True)
-        self.verticalHeader().setFrameStyle(0)  # No frame
-
-        self.verticalHeader().setVisible(True)
-        self.verticalHeader().setFrameStyle(0)  # No frame
-        self.verticalHeader().setSectionsClickable(True)
-
-
-
-        self.verticalHeader().setSectionsMovable(True)
-
-        self.verticalHeader().setSortIndicatorShown(False)
-        self.verticalHeader().setStretchLastSection(False)
-
-        self.setSortingEnabled(False)
-        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
-        self.setTabKeyNavigation(True)
-        self.setWordWrap(True)
-        self.setCornerButtonEnabled(True)
-        self.setDragEnabled(True)
-        self.setDragDropOverwriteMode(True)
-        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        self.setDropIndicatorShown(True)
-
-        # I see no effects of these properties
-        self.viewport().setAutoFillBackground(True)
 
     def quick_tasks_set_span(self):
         for row in range(self.model().rowCount()):

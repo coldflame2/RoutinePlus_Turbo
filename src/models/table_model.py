@@ -10,6 +10,7 @@ from src.resources.default import VISIBLE_HEADERS, Columns
 
 
 class TableModel(QAbstractItemModel):
+
     def __init__(self):
         super().__init__()
 
@@ -140,97 +141,37 @@ class TableModel(QAbstractItemModel):
         row_data = self._data[index.row()]
         column_key = self.column_keys[index.column()]
 
-        if row_data.get(Columns.Type.value) == 'QuickTask':
-            if column_key in Columns.EndTime.value:
-                quick_task_name = row_data.get(Columns.Name.value, None)
-                return quick_task_name
-            if column_key in Columns.StartTime.value:
-                return "Q.Task"
-            if column_key in Columns.Reminder.value:
-                return self._data[index.row()].get(Columns.Position.value, None)
+        try:
+            # retrieve the formatted value from TaskerModel's method for view
+            formatted_value = self.tasker_model.format_for_view(index.row(), column_key, row_data)
+            return formatted_value
+
+        except Exception as e:
+            # Input is invalid, return None
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
             return None
 
-        time_col_keys = [Columns.StartTime.value, Columns.EndTime.value, Columns.Reminder.value]
-        if column_key in time_col_keys:  # convert datetime to string for view
-            datetime_value = row_data.get(column_key, None)
-
-            if datetime_value:
-                try:
-                    return_datetime_string = datetime_value.strftime("%I:%M %p")  # Datetime is converted to string for view
-                    return return_datetime_string
-
-                except Exception as e:
-                    print(f"datetime value:{datetime_value}")
-                    logging.error(f"Exception type:{type(e)}  (Error Description:{e}")
-                    return None
-
-            else:
-                return None
-
-        if column_key in Columns.Duration.value:  # convert duration integer to string and add "minutes"
-            duration_value = row_data.get(column_key, None)
-            if duration_value:
-                if isinstance(duration_value, int):
-                    return_duration_string = f"{duration_value} Minutes"  # Integer is converted to string for view
-                    return return_duration_string
-                else:
-                    logging.error(f"duration value isn't integer. value:{duration_value}")
-                    return None
-            else:
-                return None
-
-        return row_data.get(column_key, None)
-
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
-        logging.debug(f"'setData' method called with value:'{value}'.")
-
-        if not index.isValid() or role != Qt.ItemDataRole.EditRole:
-            return False
-
-        if value is None:
+        if role != Qt.ItemDataRole.EditRole:
             return False
 
         row = index.row()
         column_key = self.column_keys[index.column()]
 
-        if column_key == Columns.Name.value:
-            return self.handle_task_name_input(index, row, value, role)
+        try:
+            # retrieve the formatted value from TaskerModel's method if input is valid
+            formatted_value = self.tasker_model.validate_and_format(value, row, column_key)
 
-        if column_key == Columns.Duration.value:
-            return self.handle_duration_input(index, row, value, role)
-
-        if column_key in [Columns.StartTime.value, Columns.EndTime.value, Columns.Reminder.value]:
-            return self.handle_time_inputs(value, row, column_key)
-
-        col_keys_only_dev = [Columns.ID.value, Columns.Type.value, Columns.Position.value]
-        if column_key in col_keys_only_dev:
-            logging.debug(f"Not supposed to change these columns' data by UI interaction.")
+        except Exception as e:
+            # Input is invalid, return False
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
             return False
 
-    def handle_task_name_input(self, index, row, value, role):
-        self._data[row]['task_name'] = value
+        # Set the formatted output to the model and emit dataChanged signal
+        self._data[row][column_key] = formatted_value
         self.dataChanged.emit(index, index, [role])
+
         return True
-
-    def handle_duration_input(self, index, row, value, role):
-        try:
-            new_duration = int(value)
-            self._data[row][Columns.Duration.value] = new_duration
-            self.dataChanged.emit(index, index, [role])
-            return True
-        except ValueError:
-            logging.error(f" VALUE ERROR with new input value {value} in r:c={row}:{index.column()}")
-            return False
-
-    def handle_time_inputs(self, value, row, column_key):
-        try:
-            # Save as datetime object in format: 12:00 AM, 2023-01-01
-            new_time = datetime.strptime(f'{value}, 2023-01-01', '%I:%M %p, %Y-%m-%d')
-            self._data[row][column_key] = new_time
-            return True
-        except ValueError:
-            logging.error(f" VALUE ERROR with new input value {value} in r:c={row}:{column_key}")
-            return False
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
@@ -255,7 +196,7 @@ class TableModel(QAbstractItemModel):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
 
-        return super().flags(index) | Qt.ItemFlag.ItemIsEditable
+        return super().flags(index) | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
 
     def index(self, row, column, parent=QModelIndex()):
         if parent.isValid() or row >= len(self._data) or column >= len(self.column_keys):

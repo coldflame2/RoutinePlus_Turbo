@@ -47,7 +47,7 @@ class TimeCalculator:
             return False
 
         try:
-            input_duration_int = helper_fn.strip_text(value)
+            input_duration_int = helper_fn.duration_text_to_int(value)
 
         except Exception as e:
             logging.error(f"Exception type:{type(e)} when striping input duration string (Error Description:{e}")
@@ -191,7 +191,7 @@ class TimeCalculator:
             original_duration = self._data[row]['duration']
 
             try:
-                input_duration_int = helper_fn.strip_text(value)
+                input_duration_int = helper_fn.duration_text_to_int(value)
 
             except Exception as e:
                 logging.error(f"Exception type:{type(e)} when striping input duration string (Error Description:{e}")

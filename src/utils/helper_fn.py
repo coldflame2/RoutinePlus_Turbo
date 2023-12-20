@@ -78,7 +78,7 @@ def dict_factory(cursor, row):
     return column_name_value_dict
 
 
-def strip_text(time_str):
+def duration_text_to_int(time_str):
     """
     Strip the word 'minutes' from a string and return the numerical part.
 
@@ -87,13 +87,33 @@ def strip_text(time_str):
     """
     # Split the string by spaces and take the first part (assuming the format is always 'number minutes')
     number_str = time_str.split()[0]
-    logging.debug(f"input string:'{time_str}'. returning value:'{number_str}'.")
-    return int(number_str)
+    try:
+        return int(number_str)
+    except ValueError:
+        logging.error(f"ValueError: Could not convert string '{time_str}' to integer.")
+        raise ValueError
+
+
+def duration_int_to_text(duration_int):
+    if isinstance(duration_int, int):
+        return f"{duration_int} Minutes"
+    else:
+        logging.error(f"Duration value isn't integer. value: {duration_int}")
+        return None
 
 
 def string_to_datetime(input_string):
     format_of_string = "%Y-%m-%d %H:%M:%S"
     return datetime.strptime(input_string, format_of_string)
+
+
+def datetime_to_string(input_datetime):
+    try:
+        return input_datetime.strftime("%I:%M %p")
+    except Exception as e:
+        print(f"datetime value: {input_datetime}")
+        logging.error(f"Exception type: {type(e)}  (Error Description: {e}")
+        return None
 
 
 def resource_path(relative_path):
@@ -137,6 +157,7 @@ def add_padding(rect, left, top, right, bottom):
         rect.width() - left - right,
         rect.height() - top - bottom
     )
+
 
 def ordinal_suffix(n):
     """Return the ordinal suffix of an integer."""

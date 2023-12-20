@@ -1,7 +1,7 @@
 import logging
 
-from PyQt6.QtCore import QModelIndex, QRect, Qt, QRectF
-from PyQt6.QtGui import QBrush, QColor, QFont, QPalette, QPainter, QPen
+from PyQt6.QtCore import QModelIndex, Qt
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PyQt6.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate, QStyle, QLineEdit
 
 from resources.default import Columns
@@ -96,6 +96,12 @@ class TableDelegate(QStyledItemDelegate):
     def paint_state(self, painter, option, index, text):
         is_selected = option.state & QStyle.StateFlag.State_Selected
         is_hovered = option.state & QStyle.StateFlag.State_MouseOver
+        is_focused = option.state & QStyle.StateFlag.State_HasFocus
+
+        is_testing = option.state & QStyle.StateFlag.State_ReadOnly
+
+        if is_testing:
+            self.paint_testing_state(painter, option, index)
 
         if is_selected and is_hovered:
             self.paint_hover_on_selected(painter, option)
@@ -104,8 +110,24 @@ class TableDelegate(QStyledItemDelegate):
         elif is_hovered:
             self.paint_hover_state(painter, option)
 
+        if is_focused:
+            self.paint_focused_state(painter, option, index)
+
         text_rect = helper_fn.add_padding(option.rect, 25, 1, 1, 1)
         self.paint_text(painter, text_rect, text)
+
+    def paint_testing_state(self, painter, option, index):
+        padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
+        self.draw_h_line_bottom(painter, padded_rect, "#FF00CE", 5)
+        self.draw_v_line(painter, padded_rect, "#FF00CE", 5)
+        painter.setPen(QColor('black'))
+
+    def paint_focused_state(self, painter, option, index):
+        padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
+        self.draw_h_line_bottom(painter, padded_rect, "#36436A", 1)
+        self.draw_h_line_top(painter, padded_rect, "#36436A", 1)
+        self.draw_v_line(painter, padded_rect, "#36436A", 1)
+        painter.setPen(QColor('black'))
 
     def paint_hover_on_selected(self, painter, option):
         padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)

@@ -96,6 +96,7 @@ class LeftBar(QObject):
             {"display_name": "+ Task", "action_name": "New Task", "tool_tip": "Add a new task"},
             {"display_name": "+ QuickTask", "action_name": "New QuickTask", "tool_tip": "Add a new QuickTask"},
             {"display_name": "Preferences", "action_name": "Settings", "tool_tip": "Modify app preferences"},
+            {"display_name": "Test", "action_name": "Testing", "tool_tip": "Testing"},
             ]
 
         secondary_buttons_names = [
