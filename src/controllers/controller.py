@@ -53,7 +53,7 @@ class Controller:
         try:
             self.model.tasker_model.insert_new_task(selected_row + 1, data_to_insert)
         except Exception as e:
-            logging.error(f"Exception type: (type{e}). Error:{e}")
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
 
         # Update the positions of the rows below the new row
         try:

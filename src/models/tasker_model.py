@@ -27,7 +27,7 @@ class TaskerModel:
 
     def update_row_id(self, row, data_to_insert):
         row_id = self.model.app_data.insert_new_row(data_to_insert)
-        self.model.set_item(row, 'id', row_id)
+        self.model.set_item_to_model(row, 'id', row_id)
 
     def delete_row_and_data(self, row):
         logging.debug(f"Deleting row: '{row}'")
