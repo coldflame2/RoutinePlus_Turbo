@@ -57,7 +57,9 @@ class Controller:
 
         # Update the positions of the rows below the new row
         try:
-            self.processor.update_positions(selected_row + 1 + 1)  # +1 for the new row, +1 for the row below
+            self.processor.update_positions(selected_row + 1 + 1, 'add')  # +1 for the new row, +1 for the
+            # row
+            # below
         except Exception as e:
             logging.error(f"Exception type: (type{e}). Error:{e}")
 
@@ -72,7 +74,7 @@ class Controller:
             except Exception as e:
                 logging.error(f"Exception type: (type{e}). Error:{e}")
 
-            self.processor.update_positions(selected_row)
+            self.processor.update_positions(selected_row, 'delete')
     def save_all(self):
         logging.debug(f"Save data requested in controller.")
         self.model.save_to_database_file()
