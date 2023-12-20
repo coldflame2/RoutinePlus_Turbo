@@ -67,7 +67,7 @@ class Processor:
             new_position = old_position + position_change
 
             try:
-                update_successful = self.model.set_item_to_model(row, col_key, new_position)
+                update_successful = self.model.set_item_in_model(row, col_key, new_position)
                 if not update_successful:
                     logging.error(f"Updating sequence for row: {row} failed.")
                     return False

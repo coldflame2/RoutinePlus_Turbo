@@ -97,8 +97,10 @@ class TableDelegate(QStyledItemDelegate):
         is_selected = option.state & QStyle.StateFlag.State_Selected
         is_hovered = option.state & QStyle.StateFlag.State_MouseOver
         is_focused = option.state & QStyle.StateFlag.State_HasFocus
-
         is_testing = option.state & QStyle.StateFlag.State_ReadOnly
+
+        if is_focused:
+            self.paint_focused_state(painter, option, index)
 
         if is_testing:
             self.paint_testing_state(painter, option, index)
@@ -110,9 +112,6 @@ class TableDelegate(QStyledItemDelegate):
         elif is_hovered:
             self.paint_hover_state(painter, option)
 
-        if is_focused:
-            self.paint_focused_state(painter, option, index)
-
         text_rect = helper_fn.add_padding(option.rect, 25, 1, 1, 1)
         self.paint_text(painter, text_rect, text)
 
@@ -123,10 +122,11 @@ class TableDelegate(QStyledItemDelegate):
         painter.setPen(QColor('black'))
 
     def paint_focused_state(self, painter, option, index):
-        padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
+        padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 0)
         self.draw_h_line_bottom(painter, padded_rect, "#36436A", 1)
         self.draw_h_line_top(painter, padded_rect, "#36436A", 1)
-        self.draw_v_line(painter, padded_rect, "#36436A", 1)
+        # self.draw_v_line(painter, padded_rect, "#36436A", 1)
+        # self.draw_v_line_left(painter, padded_rect, "#36436A", 1)
         painter.setPen(QColor('black'))
 
     def paint_hover_on_selected(self, painter, option):
@@ -139,12 +139,12 @@ class TableDelegate(QStyledItemDelegate):
 
     def paint_selected_state(self, painter, option, index):
         if self.view and self.view.clicked_index == index:  # Selected Cell
-            padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
+            padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 0)
             self.fill_rect_with_color(painter, option, padded_rect, "#C8E6FF")
             painter.setPen(QColor('black'))
 
         else:  # Selected row
-            padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
+            padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 0)
             self.fill_rect_with_color(painter, option, padded_rect, "#DCFFFF")
             self.draw_v_line(painter, padded_rect, "#36436A", 1)
             painter.setPen(QColor('black'))
@@ -180,3 +180,10 @@ class TableDelegate(QStyledItemDelegate):
 
     def paint_text(self, painter, rect, text):
         painter.drawText(rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, str(text))
+
+    def draw_v_line_left(self, painter, rect_line, color, width):
+        pen = QPen(QColor(color), width)
+        pen.setCapStyle(Qt.PenCapStyle.FlatCap)  # Smooth end caps for lines
+        painter.setPen(pen)
+
+        painter.drawLine(rect_line.topLeft(), rect_line.bottomLeft())

@@ -32,7 +32,7 @@ class TaskerModel:
 
     def update_row_id(self, row, data_to_insert):
         row_id = self.model.app_data.insert_new_row(data_to_insert)
-        self.model.set_item_to_model(row, 'id', row_id)
+        self.model.set_item_in_model(row, 'id', row_id)
 
     def delete_row_and_data(self, row):
         logging.debug(f"Deleting row: '{row}'")
@@ -109,12 +109,12 @@ class TaskerModel:
         try:
             duration_value_int = helper_fn.duration_text_to_int(value)
             logging.debug(f"Duration value after stripping text: '{duration_value_int}'")
-        except ValueError as e:
+        except ValueError:
             logging.error(f"ValueError: Could not convert string '{value}' to integer.")
             raise ValueError(f"Duration value is not numeric: '{value}'")
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
-            raise f"Exception type: {type(e)}. Error:{e}"
+            raise e
 
         if duration_value_int == "":
             logging.debug(f"Duration value is empty: '{duration_value_int}'")

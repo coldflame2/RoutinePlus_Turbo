@@ -1,9 +1,9 @@
 import logging
-from datetime import datetime
 from typing import Any, Dict, List
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 
+from models.auto_time_updater import AutoTimeUpdater
 from models.tasker_model import TaskerModel
 from src.models.app_data import AppData
 from src.resources.default import VISIBLE_HEADERS, Columns
@@ -43,7 +43,7 @@ class TableModel(QAbstractItemModel):
             logging.error(f"IndexError: Row index {row} is out of range")
             return None
 
-    def set_item_to_model(self, row, column_key, value):
+    def set_item_in_model(self, row, column_key, value):
         """
         Updates the value for a specified row and column.
 
@@ -167,11 +167,35 @@ class TableModel(QAbstractItemModel):
             logging.error(f"Exception type: {type(e)}. Error:{e}")
             return False
 
-        # Set the formatted output to the model and emit dataChanged signal
-        self._data[row][column_key] = formatted_value
-        self.dataChanged.emit(index, index, [role])
+        try:
+            # retrieve the other data to update from TableSyncManager's method
+            auto_time_update = AutoTimeUpdater(self)
+            other_data_to_update = auto_time_update.get_data_to_update(row, column_key, formatted_value)
 
-        return True
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+            return False
+
+        # update other values in the model
+        # Set the formatted output to the model and emit dataChanged signal
+        logging.debug(f"Data prepared for edited cell and other cells.")
+        try:
+            logging.debug(f"Updating value of edited cell.")
+            self._data[row][column_key] = formatted_value
+            self.dataChanged.emit(index, index, [role])
+
+            logging.debug(f"Updating values of other cells.")
+            # update other values in the model
+            for change_row, column, value in other_data_to_update:
+                self.set_item_in_model(change_row, column, value)
+
+            logging.debug(f"Values successfully updated.")
+            return True
+
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+            return False
+
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:

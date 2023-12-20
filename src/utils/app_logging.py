@@ -14,9 +14,7 @@ def setup_root_logger():  # This is a root logger, which is called in main(), an
 
     log_file_path = os.path.join(environment_cls.LOG_FOLDER_PATH, environment_cls.LOG_FILE_NAME)
 
-    file_handler = logging.handlers.RotatingFileHandler(
-        log_file_path, maxBytes=900000, backupCount=6
-        )
+    file_handler = logging.handlers.RotatingFileHandler(log_file_path, maxBytes=900000, backupCount=6)
 
     log_text_format = ('[%(levelname)s][%(lineno)d][%(filename)s] %(message)s '
                        ' [TIME: %(asctime)s][%(name)s]')
