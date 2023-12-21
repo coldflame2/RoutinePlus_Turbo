@@ -19,6 +19,8 @@ class TableView(QTableView):
 
         self.clicked_index = None
         self.clicked.connect(self.on_cell_clicked)
+        self.background_bg = "#B3BFDC"
+
 
     def on_cell_clicked(self, index):
         self.clicked_index = index
@@ -107,6 +109,10 @@ class TableView(QTableView):
 
     def paintEvent(self, event):
         painter = QPainter(self.viewport())
-        background = "#B3BFDC"
-        painter.fillRect(self.viewport().rect(), QColor(background))
+        painter.fillRect(self.viewport().rect(), QColor(self.background_bg))
         super().paintEvent(event)
+
+    def testing(self, value):
+        print(f"Value from signal: {value}")
+        self.background_bg = "#000000"
+

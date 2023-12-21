@@ -102,12 +102,12 @@ def duration_int_to_text(duration_int):
         return None
 
 
-def string_to_datetime(input_string):
+def str_to_dt(input_string):
     format_of_string = "%Y-%m-%d %H:%M:%S"
     return datetime.strptime(input_string, format_of_string)
 
 
-def datetime_to_string(input_datetime):
+def dt_to_str(input_datetime):
     try:
         return input_datetime.strftime("%I:%M %p")
     except Exception as e:
@@ -133,7 +133,6 @@ def calculate_duration(start_time, end_time):
         duration = (end_time - start_time).total_seconds() / 60
         return int(duration)  # Return duration as integer minutes
     return 0
-
 
 def calculate_end_time(start_time, duration):
     """Calculate end_time based on start_time and duration."""

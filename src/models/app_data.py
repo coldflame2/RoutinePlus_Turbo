@@ -78,12 +78,12 @@ class AppData:
             # check data type of each value in the row
 
             if row_data[Columns.Type.value] == 'main':
-                row_data[Columns.StartTime.value] = helper_fn.string_to_datetime(
+                row_data[Columns.StartTime.value] = helper_fn.str_to_dt(
                     row_data[Columns.StartTime.value])
 
-                row_data[Columns.EndTime.value] = helper_fn.string_to_datetime(
+                row_data[Columns.EndTime.value] = helper_fn.str_to_dt(
                     row_data[Columns.EndTime.value])
-                row_data[Columns.Reminder.value] = helper_fn.string_to_datetime(
+                row_data[Columns.Reminder.value] = helper_fn.str_to_dt(
                     row_data[Columns.Reminder.value])
 
                 formatted_data.append(row_data)

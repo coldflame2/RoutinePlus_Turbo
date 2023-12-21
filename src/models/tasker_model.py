@@ -78,30 +78,33 @@ class TaskerModel:
             raise ValueError(f"Time value is empty: '{value}'")
 
         # Regular expression pattern to match the specified formats
-        pattern = (r'^(0?[1-9]|1[0-2])'
-                   r'([:/.;-]?)'
-                   r'([0-5][0-9])\s?'
-                   r'(AM|PM|am|pm)?$')
+        pattern = r'^(0?[1-9]|1[0-2])([:/.;-]?([0-5][0-9]))?\s?(AM|PM)?$'
 
         # Match the input with the pattern
-        match = re.match(pattern, value)
+        match = re.match(pattern, value, re.IGNORECASE)
 
         if match:
             logging.debug(f"Time value input matches the regex pattern: '{value}'")
 
             hour = match.group(1)  # Capturing group for hours
-            minute = match.group(3)  # Capturing group for minutes
+            minute = match.group(3) if match.group(3) else "00"  # Capturing group for minutes, default to "00"
 
-            # get am/pm and capital case it
+            # Get AM/PM and capitalize it. Default to 'AM' if not provided
             am_pm = match.group(4).upper() if match.group(4) else 'AM'
-            print(f"Hour: {hour}, Minute: {minute}, value: {value}")
 
+            # Format the time
             time_new = f"{hour}:{minute} {am_pm}"
+
             # Convert to datetime object
             format_str = "%I:%M %p, %Y-%m-%d"
             time_obj = datetime.strptime(f'{time_new}, 2023-01-01', format_str)
+
+            logging.debug(f"Time value input validated and returning the formatted datetime object: '{time_obj}'")
+
             return time_obj
+
         else:
+            logging.error(f"Time value input does not match the regex pattern: '{value}'")
             return False
 
     def validate_duration(self, value):
@@ -110,7 +113,8 @@ class TaskerModel:
             duration_value_int = helper_fn.duration_text_to_int(value)
             logging.debug(f"Duration value after stripping text: '{duration_value_int}'")
         except ValueError:
-            logging.error(f"ValueError: Could not convert string '{value}' to integer.")
+            logging.error(f"ValueError. While validating duration, could not convert string '{value}' to "
+                          f"integer.")
             raise ValueError(f"Duration value is not numeric: '{value}'")
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
@@ -165,7 +169,7 @@ class TaskerModel:
             return self.format_quick_task(column_key, row_data)
 
         if column_key in [Columns.StartTime.value, Columns.EndTime.value, Columns.Reminder.value]:
-            return helper_fn.datetime_to_string(row_data.get(column_key))
+            return helper_fn.dt_to_str(row_data.get(column_key))
 
         if column_key == Columns.Duration.value:
             return helper_fn.duration_int_to_text(row_data.get(column_key))

@@ -28,7 +28,8 @@ class Columns(Enum):
 # Constants
 DATE_FORMAT = "%I:%M %p, %Y-%m-%d"
 DATETIME_COLUMN_KEYS = ["start_time", "end_time"]
-FIXED_DATE = "2023-01-01"
+FIXED_DATE = "2023-01-01"  # Year-month-day
+LAST_CELL = "2023-01-02"
 
 
 def convert_to_datetime(time_str):
@@ -39,6 +40,13 @@ def convert_to_datetime(time_str):
         logging.error(f"Exception type: {type(e)} while converting to datetime. Description: {e}")
         return None
 
+def Convert_last_cell(time_str):
+    """ Convert time string to datetime object with a fixed date. """
+    try:
+        return datetime.strptime(f'{time_str}, {LAST_CELL}', DATE_FORMAT)
+    except Exception as e:
+        logging.error(f"Exception type: {type(e)} while converting to datetime. Description: {e}")
+        return None
 
 default_tasks = (
     {
@@ -52,7 +60,7 @@ default_tasks = (
     },
     {
         Columns.StartTime.value: convert_to_datetime('07:00 AM'),
-        Columns.EndTime.value: convert_to_datetime('12:00 AM'),
+        Columns.EndTime.value: Convert_last_cell('12:00 AM'),
         Columns.Duration.value: 1020,
         Columns.Name.value: 'Last',
         Columns.Reminder.value: convert_to_datetime('07:00 AM'),
