@@ -22,15 +22,24 @@ class TaskerModel:
             return False
 
         try:
+            logging.debug(f"Beginning to insert new row at index: '{row}'")
             self.model.beginInsertRows(QModelIndex(), row, row)
             self.model.set_row_data(row, data_to_insert)
             self.model.endInsertRows()
+
         except Exception as e:
             logging.error(f"Exception type: (type{e}). Error:{e}")
+            return False
 
-        self.update_row_id(row, data_to_insert)
+        try:
+            self.insert_row_to_sqlite(row, data_to_insert)
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+            return False
 
-    def update_row_id(self, row, data_to_insert):
+        return True
+
+    def insert_row_to_sqlite(self, row, data_to_insert):
         row_id = self.model.app_data.insert_new_row(data_to_insert)
         self.model.set_item_in_model(row, 'id', row_id)
 
@@ -41,7 +50,7 @@ class TaskerModel:
         try:
             row_id = self.model.get_item_from_model(row, 'id')
             self.model.delete_row_from_model(row)  # Delete from model
-            self.model.app_data.delete_task(row_id)  # Delete from SQLite file using row ID
+            self.model.app_data.delete_sqlite_row(row_id)  # Delete from SQLite file using row ID
 
         except Exception as e:
             logging.error(f"Exception type:{type(e)} when deleting row (Error Description:{e}")

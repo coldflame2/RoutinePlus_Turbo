@@ -12,6 +12,7 @@ from src.utils import helper_fn
 
 class LeftBar(QObject):
     left_bar_signals = pyqtSignal(str)
+    button_hover_changed = pyqtSignal(object, bool)  # New signal for hover state
 
     def __init__(self):
         super().__init__()
@@ -97,6 +98,7 @@ class LeftBar(QObject):
             {"display_name": "+ QuickTask", "action_name": "New QuickTask", "tool_tip": "Add a new QuickTask"},
             {"display_name": "Preferences", "action_name": "Settings", "tool_tip": "Modify app preferences"},
             {"display_name": "Test", "action_name": "Testing", "tool_tip": "Testing"},
+            {"display_name": "Reset", "action_name": "Reset", "tool_tip": "Testing2"},
             ]
 
         secondary_buttons_names = [
@@ -134,8 +136,11 @@ class LeftBar(QObject):
         button.setToolTip(name.get("tool_tip", name["display_name"]))
 
         button_action = name["action_name"]
+        button.setProperty("action_name", name["action_name"])
+
         button.clicked.connect(lambda _, action=button_action: self.emit_signal(action))
 
+        button.installEventFilter(self)
         return button
 
     def emit_signal(self, action):
@@ -164,3 +169,19 @@ class LeftBar(QObject):
 
     def handle_actions_here(self, action):
         pass
+
+    def eventFilter(self, obj, event):
+        if isinstance(obj, QPushButton):
+            action_name = obj.property("action_name")
+            if event.type() == event.Type.Enter:
+                self.on_button_hover_enter(action_name)
+            elif event.type() == event.Type.Leave:
+                self.on_button_hover_leave(action_name)
+        return super().eventFilter(obj, event)
+
+    def on_button_hover_enter(self, action_name):
+        # Get Button action name
+        self.button_hover_changed.emit(action_name, True)  # Emit signal with hover state
+
+    def on_button_hover_leave(self, action_name):
+        self.button_hover_changed.emit(action_name, False)

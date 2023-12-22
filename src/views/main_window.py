@@ -19,7 +19,6 @@ from src.views.ribbon import RibbonWidget
 
 class MainWindow(QMainWindow):
     close_requested_signal = pyqtSignal(str)
-    main_frame_signal_after_left_bar = pyqtSignal(str)
     window_state_changed = pyqtSignal()
 
     def __init__(self, table_view, controller):
@@ -104,11 +103,9 @@ class MainWindow(QMainWindow):
 
     def _configure_ui_elements(self):
         self._configure_title_bar()
-        self.left_bar.left_bar_signals.connect(self.connect_to_controller)
+        self.left_bar.left_bar_signals.connect(self.controller.signal_from_left_bar)
+        self.left_bar.button_hover_changed.connect(self.controller.button_hover_state)
 
-    def connect_to_controller(self, action):
-        logging.debug(f"Emitting '{action}' signal from MainWindow (originally emitted from LeftBar).")
-        self.controller.signal_from_left_bar(action)
 
     def _configure_title_bar(self):
         self.title_bar.update()
@@ -156,14 +153,6 @@ class MainWindow(QMainWindow):
 
     def minimize_to_tray(self):
         pass
-        # self.hide()
-        # self.tray_icon.show()
-        # self.tray_icon.showMessage(
-        #     f"{self.env_config_class.WIN_TITLE}",
-        #     "The app is minimized to the system tray.",
-        #     QSystemTrayIcon.MessageIcon.Information, 1000
-        #     )
-        # logging.debug(f" Application minimized to the system tray.")
 
     def closeEvent(self, event):
         try:
@@ -174,10 +163,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logging.error(f" Exception type:{type(e)} (Error Description:{e}")
             event.ignore()
-
-    def show_win_geometry(self):
-        helper_fn.show_toast("Geometry", f"Geometry: {self.geometry()}", 4000)
-        print(f"Geometry: {self.geometry()}")
 
     def restore_geometry(self):
         try:

@@ -19,6 +19,7 @@ class TableModel(QAbstractItemModel):
         self.column_keys = [column.value for column in Columns]
 
         self.tasker_model = TaskerModel(self)
+        self.auto_time_updater = AutoTimeUpdater(self)
 
         self.initiate_data()
 
@@ -119,15 +120,51 @@ class TableModel(QAbstractItemModel):
     def save_to_database_file(self):
         logging.debug("Looping rows in model and calling update method in AppData.")
 
-        for row in range(self.rowCount()):
-            row_data = {}
-            for column_key in self.column_keys:
-                row_data[column_key] = self._data[row][column_key]
+        try:
+            for row in range(self.rowCount()):
+                row_data = {}
+                for column_key in self.column_keys:
+                    row_data[column_key] = self._data[row][column_key]
 
-            self.app_data.update_sqlite_data(row_data)
+                self.app_data.update_sqlite_data(row_data)
 
-        self.app_data.commit_sqlite_all()
+            self.app_data.commit_sqlite_all()
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+
         logging.debug("SUCCESS: Date updated and saved on SQLite database file.")
+
+    def clear_model(self):
+        self._data.clear()
+        self.app_data.delete_all()
+        self.dataChanged.emit(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+        self.layoutChanged.emit()
+        logging.debug(f"Model cleared. Data: {self._data}")
+
+    def backup_state(self):
+        # Create a deep copy of the current data
+        logging.debug(f"Returning a backup")
+        return [row.copy() for row in self._data]
+
+    def default_state(self):
+        logging.debug(f"Returning to default state.")
+
+        self.clear_model()
+
+        self._data = list(self.app_data.get_default_entries())
+
+        # Emit signals
+        self.dataChanged.emit(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+        self.layoutChanged.emit()
+        self.test_signal_from_model.emit("Default state set")
+        self.layoutChanged.emit()
+        logging.debug(f"Model state has been reset to default.")
+
+    def rollback_state(self, backup):
+        logging.debug(f"Rolling back the model state.")
+        self._data = backup
+        self.layoutChanged.emit()
+        logging.debug("Model state has been rolled back.")
 
     def close_database(self):
         logging.debug("Closing the database.")
@@ -177,8 +214,9 @@ class TableModel(QAbstractItemModel):
 
         # retrieve the other data to update from TableSyncManager's method
         try:
-            auto_time_updater = AutoTimeUpdater(self)
-            other_data_to_update = auto_time_updater.get_data_to_update(row, column_key, formatted_value)
+            other_data_to_update = self.auto_time_updater.get_data_to_update(
+                row, column_key, formatted_value)
+
             logging.debug(f"Other data to update: {other_data_to_update}")
 
         except Exception as e:
@@ -216,11 +254,11 @@ class TableModel(QAbstractItemModel):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if 0 <= section <= len(self.visible_headers):
-                    return self.visible_headers[section-1]
+                    return self.visible_headers[section - 1]
 
             elif orientation == Qt.Orientation.Vertical:
                 # Return the row number for the given section (row index)
-                return section + 1
+                return f"I:{section}"
         return None
 
     def flags(self, index):

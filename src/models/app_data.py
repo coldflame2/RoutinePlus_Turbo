@@ -65,7 +65,7 @@ class AppData:
 
         if len(cursor.fetchall()) == 0:
             logging.debug(f"No data found in database file. Inserting default tasks from defaults.")
-            for each_task_dict in default.default_tasks:
+            for each_task_dict in default.DEFAULT_TASKS:
                 self.insert_new_row(each_task_dict)
             cursor.close()
 
@@ -119,11 +119,6 @@ class AppData:
         task_type = row_data[Columns.Type.value]
         task_position = row_data[Columns.Position.value]
 
-        start_time = row_data[Columns.StartTime.value]
-        end_time = row_data[Columns.EndTime.value]
-        duration = row_data[Columns.Duration.value]
-        reminder = row_data[Columns.Reminder.value]
-
         logging.debug(f"row_data - {row_data}")
         logging.debug(f"Updating task 'Name:{task_name}' in the database. Task ID:{task_id}. Type"
                       f":{task_type}. Position:{task_position}.")
@@ -148,7 +143,7 @@ class AppData:
         logging.debug(f"Committing all changes to the database.")
         self.conn.commit()
 
-    def delete_task(self, task_id):
+    def delete_sqlite_row(self, task_id):
         logging.debug(f"Deleting task from the database.")
         delete_query = "DELETE FROM daily_routine WHERE id = ?"
         self.conn.execute(delete_query, (task_id,))
@@ -161,3 +156,24 @@ class AppData:
 
     def __del__(self):
         self.close()
+
+    def delete_all(self):
+        logging.debug(f"Deleting all rows from SQLite database.")
+        delete_query = "DELETE FROM daily_routine"
+        try:
+            self.conn.execute(delete_query)
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+
+    def get_default_entries(self):
+        """
+        Retrieves the default data from the predefined source.
+
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries representing the default data.
+        """
+        default_data = []
+        for entry in default.DEFAULT_TASKS:
+            self.insert_new_row(entry)
+            default_data.append(entry)
+        return default_data

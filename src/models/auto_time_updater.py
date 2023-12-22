@@ -1,5 +1,7 @@
 import logging
 
+from PyQt6.QtCore import Qt
+
 from resources.default import Columns
 from utils import helper_fn
 
@@ -11,6 +13,7 @@ class AutoTimeUpdater:
 
     def __init__(self, model):
         self.model = model
+        self._recently_updated_rows = set()
 
     def get_data_to_update(self, row, changed_column, new_value):
         """
@@ -215,3 +218,204 @@ class AutoTimeUpdater:
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
             return None
+
+    def update_positions(self, first_row_to_update, operation):
+        """
+        Update sequences of rows below the affected row index.
+
+        Args:
+        affected_row (int): The index of the row where the operation (addition or deletion) occurred.
+        operation (str): Type of operation, either 'add' or 'delete'.
+        """
+        logging.debug(f"Updating sequences of rows below row index: {first_row_to_update} after {operation} operation.")
+
+        # Determine the operation type: addition or deletion
+        position_change = 1 if operation == 'add' else -1
+
+        for row in range(first_row_to_update, self.model.rowCount()):
+            col_key = Columns.Position.value
+            old_position = self.model.get_item_from_model(row, col_key)
+            new_position = old_position + position_change
+
+            try:
+                update_successful = self.model.set_item_in_model(row, col_key, new_position)
+                if not update_successful:
+                    logging.error(f"Updating sequence for row: {row} failed.")
+                    return False
+
+            except Exception as e:
+                logging.error(f"Exception type: {type(e)}  (Error Description: {e}")
+                return
+
+        return True
+
+    def data_after_new_task(self, clicked_row, data_for_new_row):
+        """
+        Updates StartTime, Duration, and Positions of the row below the new row.
+
+        :param clicked_row:
+        This is the row index of clicked/selected row. This is also the data row.
+        New row index is clicked_row + 1.
+        And the row to auto-update is clicked_row + 1 + 1.
+
+        IMPORTANT: New Row is not yet inserted. The indices are hypothetical.
+
+        :param data_for_new_row:
+        :return:
+        """
+        changes = []
+
+        logging.debug(f"Updating next row's start time and duration.")
+
+        main_row_below_new = self.find_main_task_below(clicked_row)
+
+        try:
+            start_time_row_below_new = data_for_new_row[Columns.EndTime.value]  # Same as end time of the new row
+            changes.append((main_row_below_new, Columns.StartTime.value, start_time_row_below_new))
+
+            end_time_row_below_new = self.model.get_item_from_model(clicked_row + 1, Columns.EndTime.value)
+            duration_row_below_new = helper_fn.calculate_duration(start_time_row_below_new, end_time_row_below_new)
+
+            changes.append((main_row_below_new, Columns.Duration.value, duration_row_below_new))
+
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+            return None
+
+        logging.debug(f"Changes prepared for row below new: {changes}")
+        return changes
+
+    def find_main_task_below(self, initial_clicked_row):  # For updating next task after new task
+        """
+        Find the main task below with the selected row.
+
+        IMPORTANT: To check row types, index in current state is checked. But to update, we add 1 to the index.
+        This is because the new row is not yet inserted. And the changes would be for the row after the new row has been inserted.
+
+        :param initial_clicked_row: The row index that the user initially clicked.
+        :return: The row index of the main task found, or None if no main task is found.
+        """
+        logging.debug("Finding main task below the selected task for auto-update.")
+
+        current_row_below_new = initial_clicked_row+1  # after new row, it will be clicked_row + 1 + 1
+        if self.model.rowCount() - 1 == current_row_below_new:
+            logging.debug(f"Row below new row would be last row. Returning last row for "
+                          f"auto-updating.")
+            return current_row_below_new + 1
+
+        while current_row_below_new < self.model.rowCount():
+            if self.model.get_item_from_model(current_row_below_new, Columns.Type.value) == 'main':
+                logging.debug(f"Main task found at row index: {current_row_below_new + 1}")
+                return current_row_below_new + 1
+            else:
+                logging.debug(f" Row {current_row_below_new+1} is QuickTask. Checking next row "
+                              f"type.")
+                current_row_below_new += 1
+
+        logging.error("No main task found below the selected row for auto-updating.")
+        return None
+
+
+    def update_after_new_quick_task(self, clicked_row, data_to_insert):
+        """
+        Updates Positions of the row below the new row.
+
+        :param clicked_row:
+        This is the row index of clicked/selected row. This is also the data row.
+        New row index is clicked_row + 1.
+        And the row to auto-update is clicked_row + 1 + 1.
+
+        :param data_to_insert:
+        :return:
+        """
+
+        logging.debug(f"Updating next row's start time and duration.")
+
+        self.update_positions(clicked_row + 1 + 1, 'add')
+
+        logging.debug(f"New QuickTask inserted, positions updated.")
+
+    def calculate_data_after_deletion(self, clicked_row):
+        """
+        Get Data for the replaced row (same index as clicked/to-be deleted row).
+        Important: the row hasn't been deleted yet.
+
+        Get EndTime of row above. That will be StartTime of Replaced/clicked row.
+        Get EndTime of row below, that will be EndTime of replaced/clicked row.
+        Calculate duration for replaced row.
+        """
+        logging.debug(f"Updating the replaced row's start time and duration.")
+        changes = []
+        task_type_row_above = self.model.get_item_from_model(clicked_row - 1, Columns.Type.value)
+        task_type = self.model.get_item_from_model(clicked_row, Columns.Type.value)
+        task_type_row_below = self.model.get_item_from_model(clicked_row + 1, Columns.Type.value)
+
+        if task_type == 'QuickTask' and task_type_row_below == 'main' and task_type_row_above == 'main':
+            logging.debug(f"Clicked row is QuickTask and row below is 'main.' Updating next row's start time and duration.")
+            # Get the EndTime of 'main' row above clicked row
+            end_time_above = self.model.get_item_from_model(clicked_row - 1, Columns.EndTime.value)
+
+            # Set the StartTime of the clicked/replaced row (Because the row hasn't been deleted yet) to the
+            # EndTime of the 'main' row
+            changes.append((clicked_row, Columns.StartTime.value, end_time_above))
+
+            # Get the EndTime of the 'main' row below the clicked row
+            end_time_below = self.model.get_item_from_model(clicked_row + 1, Columns.EndTime.value)
+
+            # Calculate the duration of the clicked row
+            duration_replaced_row = helper_fn.calculate_duration(end_time_above, end_time_below)
+            changes.append((clicked_row, Columns.Duration.value, duration_replaced_row))
+
+            logging.debug(f"Changes prepared for the replaced row after deletion: {changes}")
+            return changes
+
+
+        try:
+            end_time_above = self.model.get_item_from_model(clicked_row - 1, Columns.EndTime.value)
+            end_time_below = self.model.get_item_from_model(clicked_row + 1, Columns.EndTime.value)
+            duration_replaced_row = helper_fn.calculate_duration(end_time_above, end_time_below)
+            changes.append((clicked_row, Columns.StartTime.value, end_time_above))
+            changes.append((clicked_row, Columns.Duration.value, duration_replaced_row))
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+            return None
+
+        logging.debug(f"Changes prepared for the replaced row after deletion: {changes}")
+        return changes
+
+    def update_after_new_task(self, data_below_new):
+        # Update only Start time and Duration of row below the newly added row
+        try:
+            logging.debug("Updating StartTime and Duration of row below the new task row.")
+
+            if data_below_new:
+                # Update the row below with the new data
+                for row, col, val in data_below_new:
+                    self.model.set_item_in_model(row, col, val)
+
+                # Update positions of all the rows below the new row
+                row_below_new_row = data_below_new[0][0]
+                self.update_positions(row_below_new_row, 'add')
+
+            logging.debug("Data Updated after adding new task.")
+
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)} while trying to update after new task. Error: {e}")
+            raise e
+
+    def update_after_delete_task(self, replaced_row_data):
+        logging.debug(f"Updating replaced row data after row deletion.")
+        try:
+            if replaced_row_data:
+                for row, col, val in replaced_row_data:
+                    self.model.set_item_in_model(row, col, val)
+
+                # Update positions of all the rows below starting from replaced row index
+                replaced_row_index = replaced_row_data[0][0]
+                self.update_positions(replaced_row_index, 'delete')
+
+            logging.debug(f"Data of replaced row updated after deleting row.")
+
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)} while trying to update after new task. Error: {e}")
+            raise e

@@ -1,7 +1,7 @@
 import logging
 
-from PyQt6.QtCore import QModelIndex, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PyQt6.QtCore import QModelIndex, Qt, QRect, QTimer
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QImage
 from PyQt6.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate, QStyle, QLineEdit
 
 from resources.default import Columns
@@ -13,7 +13,47 @@ class TableDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.view = view
         self.row_type_dict = {}  # {row index:type}
+        self.is_button_hovered = {}  # {button_name: True/False}
+        self.selected_row = None
+
+        self.opacity = 0.0
+
+        self.animation_timer = QTimer(self)
+        self.animation_timer.timeout.connect(self.increment_opacity)
+        self.animation_timer.start(100)  # Adjust the interval for smoother or faster animation
+
         logging.debug(f"TableDelegate class constructor starting. Nothing in TableDelegate constructor.")
+
+    def increment_opacity(self):
+        if self.opacity < 1.0:
+            self.opacity += 0.1  # Increment opacity; adjust for different speed
+            self.view.viewport().update()  # Trigger a repaint
+        else:
+            self.opacity -= 0.1  # Stop the timer if full opacity is reached
+            self.view.viewport().update()  # Trigger a repaint
+
+
+
+    def set_button_hovered(self, selected_row, is_hovered):
+        if selected_row is not None:
+            self.opacity = 0.0
+            self.selected_row = selected_row
+
+            self.is_button_hovered[selected_row] = is_hovered
+            current_index = self.view.model().index(selected_row, 0)  # Assuming 0 is a valid column
+            next_index = self.view.model().index(selected_row + 1, 0)
+            self.view.update(current_index)  # Update current row
+            if next_index.isValid():
+                self.view.update(next_index)  # Update next row
+
+            if is_hovered is False:
+                self.selected_row = None
+                self.opacity = 0.0
+                self.animation_timer.start(50)  # Adjust the interval for smoother or faster animation
+
+        else:
+            self.is_button_hovered.pop(selected_row, None)
+            self.selected_row = None
 
     def update_row_type_dict(self, model):
         for row in range(model.rowCount()):
@@ -45,7 +85,56 @@ class TableDelegate(QStyledItemDelegate):
 
         self.paint_state(painter, option, index, text_in_cell)  # Draw line and fill color
 
+        if self.selected_row is not None and index.column() in [1]:
+            self.paint_new_row_hint(painter, option, index)
+
         painter.restore()
+
+    def paint_new_row_hint(self, painter, option, index):
+        if index.row() == self.selected_row:
+            self.draw_h_line_bottom(painter, option.rect, "#8791AB", 10)
+
+        if index.row() == self.selected_row + 1:
+            if self.is_button_hovered.get(self.selected_row, False):
+                # Get the image path
+                image_path = helper_fn.resource_path("resources/images/arrow.png")
+
+                # Load the image
+                image = QImage(image_path)
+                if not image.isNull():
+                    transparent_image = self.set_transparency(image, self.opacity)  # 50% transparency
+
+                    image_width = 20
+                    image_height = 20
+                    try:
+                        padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 5)
+                        x_position = int(option.rect.x() + (option.rect.width() - image_width) / 2)
+                        y_position = int(option.rect.y() + (option.rect.height() - 40 - image_height) / 2)
+
+                        image_rect = QRect(x_position, y_position, image_width, image_height)
+
+                    except Exception as e:
+                        logging.error(f"Exception type: {type(e)}. Error:{e}")
+
+                    # Draw the image
+                    painter.drawImage(image_rect, transparent_image)
+
+    def set_transparency(self, image, alpha):
+        """
+        Adjust the transparency of an image.
+        :param image: QImage object
+        :param alpha: float (0.0 - 1.0), where 0.0 is fully transparent and 1.0 is fully opaque
+        :return: QImage with adjusted transparency
+        """
+        transparent_image = QImage(image.size(), QImage.Format.Format_ARGB32)
+        transparent_image.fill(0)
+
+        painter = QPainter(transparent_image)
+        painter.setOpacity(alpha)
+        painter.drawImage(0, 0, image)
+        painter.end()
+
+        return transparent_image
 
     def set_font_and_pen(self, painter):
         font = QFont("Roboto", 11)
@@ -60,18 +149,17 @@ class TableDelegate(QStyledItemDelegate):
         painter.setBrush(brush)
 
     def paint_rows_bg(self, painter, option, index, total_rows):
-
         if index.row() == 0:  # First row
             color = "#DCEAEA"
-            fill_rect = helper_fn.add_padding(option.rect, 1, 1, 0, 5)
+            fill_rect = helper_fn.add_padding(option.rect, 1, 1, 0, 2)
 
         elif index.row() == total_rows - 1:  # Last row
             color = "#DCEAEA"
-            fill_rect = helper_fn.add_padding(option.rect, 1, 5, 0, 1)
+            fill_rect = helper_fn.add_padding(option.rect, 1, 2, 0, 1)
 
         else:  # For other rows
             if self.row_type_dict.get(index.row()) == 'QuickTask':  # QuickTask rows
-                color = '#CCE0FA'
+                color = "#EAF9F9"
                 fill_rect = helper_fn.add_padding(option.rect, 1, 1, 0, 0)
             else:  # Main task rows
                 color = "#F0FFFF"
@@ -94,28 +182,28 @@ class TableDelegate(QStyledItemDelegate):
         painter.restore()
 
     def paint_state(self, painter, option, index, text):
+
         is_selected = option.state & QStyle.StateFlag.State_Selected
         is_hovered = option.state & QStyle.StateFlag.State_MouseOver
         is_focused = option.state & QStyle.StateFlag.State_HasFocus
-        is_testing = option.state & QStyle.StateFlag.State_ReadOnly
 
         if is_focused:
+            painter.setPen(QColor('black'))
             self.paint_focused_state(painter, option, index)
 
-        if is_testing:
-            self.paint_testing_state(painter, option, index)
-
-        if is_selected and is_hovered:
-            self.paint_hover_on_selected(painter, option)
-        elif is_selected:
+        if is_selected:
             self.paint_selected_state(painter, option, index)
-        elif is_hovered:
+
+        if is_selected and is_focused:
+            self.paint_focused_state(painter, option, index)
+
+        if is_hovered:
             self.paint_hover_state(painter, option)
 
         text_rect = helper_fn.add_padding(option.rect, 25, 1, 1, 1)
         self.paint_text(painter, text_rect, text)
 
-    def paint_testing_state(self, painter, option, index):
+    def paint_recently_updated_row(self, painter, option, index):
         padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
         self.draw_h_line_bottom(painter, padded_rect, "#FF00CE", 5)
         self.draw_v_line(painter, padded_rect, "#FF00CE", 5)
@@ -123,9 +211,9 @@ class TableDelegate(QStyledItemDelegate):
 
     def paint_focused_state(self, painter, option, index):
         padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 0)
-        self.draw_h_line_bottom(painter, padded_rect, "#36436A", 1)
-        self.draw_h_line_top(painter, padded_rect, "#36436A", 1)
-        # self.draw_v_line(painter, padded_rect, "#36436A", 1)
+        self.draw_h_line_bottom(painter, padded_rect, "#27304E", 5)
+        self.draw_v_line(painter, padded_rect, "#27304E", 5)
+        self.fill_rect_with_color(painter, option, padded_rect, "#DAE6F7")
         # self.draw_v_line_left(painter, padded_rect, "#36436A", 1)
         painter.setPen(QColor('black'))
 
@@ -140,15 +228,20 @@ class TableDelegate(QStyledItemDelegate):
     def paint_selected_state(self, painter, option, index):
         if self.view and self.view.clicked_index == index:  # Selected Cell
             padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 0)
-            self.fill_rect_with_color(painter, option, padded_rect, "#C8E6FF")
-            painter.setPen(QColor('black'))
+            self.fill_rect_with_color(painter, option, padded_rect, "#DAE6F7")
 
-        else:  # Selected row
             padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 0)
-            self.fill_rect_with_color(painter, option, padded_rect, "#DCFFFF")
-            self.draw_v_line(painter, padded_rect, "#36436A", 1)
-            painter.setPen(QColor('black'))
+            self.draw_h_line_bottom(painter, padded_rect, "#36436A", 2)
 
+        elif self.view.clicked_index != index:  # Selected row
+            padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 1)
+            self.draw_v_line_left(painter, padded_rect, "#EAF9F9", 5)
+            self.fill_rect_with_color(painter, option, padded_rect, "#403E59")
+
+            padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 0)
+            self.draw_h_line_bottom(painter, padded_rect, "#36436A", 2)
+
+            painter.setPen(QColor('white'))
 
     def paint_hover_state(self, painter, option):
         padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
@@ -187,3 +280,5 @@ class TableDelegate(QStyledItemDelegate):
         painter.setPen(pen)
 
         painter.drawLine(rect_line.topLeft(), rect_line.bottomLeft())
+
+        self.view.viewport().update()

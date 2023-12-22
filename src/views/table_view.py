@@ -63,6 +63,7 @@ class TableView(QTableView):
 
         self.setMouseTracking(True)
         self.setShowGrid(False)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
     def quick_tasks_set_span(self):
         for row in range(self.model().rowCount()):
@@ -116,3 +117,5 @@ class TableView(QTableView):
         print(f"Value from signal: {value}")
         self.background_bg = "#000000"
 
+    def set_hover_state(self, selected_row, bool_value):
+        self.table_delegate.set_button_hovered(selected_row, bool_value)

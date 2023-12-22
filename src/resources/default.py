@@ -40,6 +40,7 @@ def convert_to_datetime(time_str):
         logging.error(f"Exception type: {type(e)} while converting to datetime. Description: {e}")
         return None
 
+
 def Convert_last_cell(time_str):
     """ Convert time string to datetime object with a fixed date. """
     try:
@@ -48,8 +49,10 @@ def Convert_last_cell(time_str):
         logging.error(f"Exception type: {type(e)} while converting to datetime. Description: {e}")
         return None
 
-default_tasks = (
+
+DEFAULT_TASKS = (
     {
+        Columns.ID.value: None,
         Columns.StartTime.value: convert_to_datetime('12:00 AM'),
         Columns.EndTime.value: convert_to_datetime('07:00 AM'),
         Columns.Duration.value: 420,
@@ -59,6 +62,7 @@ default_tasks = (
         Columns.Position.value: 1
     },
     {
+        Columns.ID.value: None,
         Columns.StartTime.value: convert_to_datetime('07:00 AM'),
         Columns.EndTime.value: Convert_last_cell('12:00 AM'),
         Columns.Duration.value: 1020,
