@@ -1,31 +1,37 @@
 """ This module contains the QSS styles for the table widget. """
 
-background = item_border = "#B3BFDC"
-
-header_bg = "#36436A"  # header background
-header_font_color = "#DDEAF3"  # header font color
+header_bg = "#CCD4F0"  # header background
+header_border_color = "#000000"
+header_hover_color = "#BEC5DF"
+header_font_color = "#22242A"  # header font color
 header_font_size = "14pt"  # header font size
 
-TABLE_STYLE = f"""
+CORNER_BTN_STYLE = f"""
     QTableCornerButton::section {{
         background-color: {header_bg};
         }}
 """
 
+
+
 HORIZONTAL_HEADER_STYLE = f"""
-    QHeaderView::section:horizontal {{
+    QHeaderView::section {{
         background-color: {header_bg};
         color: {header_font_color};
         font-size: {header_font_size};
         font-family: "Calibri";
-        border-top: 1px solid #33384F;
-        border-right: 3px solid #33384F;
-        border-bottom: 1px solid #33384F;
-        border-left: 1px solid #33384F;            
+        border-left: 1px solid {header_border_color};            
         }}
-    QHeaderView::section:horizontal:hover {{
-        background-color: blue;
+        
+    QHeaderView::section:checked {{
+        background-color: {header_bg};           
         }}
+        
+    QHeaderView::section:hover {{
+        background-color: {header_hover_color};
+        }}
+        
+
 """
 
 VERTICAL_HEADER_STYLE = f"""
@@ -34,6 +40,6 @@ VERTICAL_HEADER_STYLE = f"""
         color: {header_font_color};
         }}
     QHeaderView::section:vertical:hover {{
-        background-color: blue;
+        background-color: {header_hover_color};
         }}
 """

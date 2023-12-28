@@ -13,7 +13,7 @@ from src.utils import helper_fn
 
 # This app's Modules
 from src.views.title_bar import TitleBar
-from src.views.left_bar import LeftBar
+from src.views.sidebar import Sidebar
 from src.views.ribbon import RibbonWidget
 
 
@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
         self._container_layout()
         self._splitter_layout()
         self._configure_ui_elements()
+        self.connect_signals()
         self._setup_win_properties()
 
         logging.debug(f"MainFrame constructor successfully initialized.")
@@ -49,7 +50,7 @@ class MainWindow(QMainWindow):
         try:
             self.title_bar = TitleBar(self)
             self.ribbon = RibbonWidget()
-            self.left_bar = LeftBar()
+            self.sidebar = Sidebar()
             self.splitter = HoverSplitter()
         except Exception as e:
             logging.error(f" Exception type:{type(e)}  (Error Description:{e}")
@@ -86,7 +87,7 @@ class MainWindow(QMainWindow):
         table_and_ribbon_v_layout.addWidget(self.table_view)
 
         # Add left bar and table+ribbon container widget to splitter
-        self.splitter.addWidget(self.left_bar.left_widget)
+        self.splitter.addWidget(self.sidebar.left_widget)
         self.splitter.addWidget(self.table_view)
 
         splitter_h_layout.setContentsMargins(0, 0, 0, 0)  # Set margins for the layout
@@ -103,8 +104,10 @@ class MainWindow(QMainWindow):
 
     def _configure_ui_elements(self):
         self._configure_title_bar()
-        self.left_bar.left_bar_signals.connect(self.controller.signal_from_left_bar)
-        self.left_bar.button_hover_changed.connect(self.controller.button_hover_state)
+
+    def connect_signals(self):
+        self.sidebar.button_click_signals.connect(self.controller.sidebar_btn_clicked_signals)
+        self.sidebar.button_hover_changed.connect(self.controller.sidebar_btn_hovered_signals)
 
 
     def _configure_title_bar(self):
@@ -121,7 +124,7 @@ class MainWindow(QMainWindow):
         self.restore_geometry()
         self.setStyleSheet(all_styles.MAIN_WINDOW_STYLE)
         self.setWindowTitle(self.env_config_class.APP_NAME)  # Keep this, even though visible win title is custom.
-        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, False)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
 
         title_bar_icon_relative_path = (os.path.join('resources/icons/title_bar_icons', self.env_config_class.ICON_NAME))
         self.icon_path = helper_fn.resource_path(title_bar_icon_relative_path)
@@ -185,7 +188,6 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, a0):
         self.set_win_state_and_geometry()
-        self.table_view.adjust_col_widths()
         logging.debug(f" MainWin resized. Saving geometry and state.")
 
     def changeEvent(self, event):

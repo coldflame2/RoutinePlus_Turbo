@@ -412,6 +412,7 @@ class AutoTimeUpdater:
 
                 # Update positions of all the rows below starting from replaced row index
                 replaced_row_index = replaced_row_data[0][0]
+
                 self.update_positions(replaced_row_index, 'delete')
 
             logging.debug(f"Data of replaced row updated after deleting row.")

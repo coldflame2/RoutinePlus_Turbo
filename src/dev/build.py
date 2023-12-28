@@ -61,7 +61,7 @@ def build():
     print(f"others_icons_dir: {others_icons_dir}")
 
     # Define the path to the left bar icons directory inside resources directory
-    left_bar_icons_dir = os.path.join(resources_dir, 'icons/left_bar_icons')
+    left_bar_icons_dir = os.path.join(resources_dir, 'icons/sidebar_icons')
     print(f"left_bar_icons_dir: {left_bar_icons_dir}")
 
     # Define the path to the title bar icons directory inside resources directory
@@ -124,7 +124,7 @@ def build():
     for left_bar_icon in left_bar_icons_list:
         print(f"left_bar_icon in 'FOR' loop in icons_list dict: {left_bar_icon}")
         cmd.append('--add-data')
-        cmd.append(f'{os.path.join(left_bar_icons_dir, left_bar_icon)};resources/icons/left_bar_icons/')
+        cmd.append(f'{os.path.join(left_bar_icons_dir, left_bar_icon)};resources/icons/sidebar_icons/')
 
     for title_bar_icon in title_bar_icons_list:
         print(f"title_bar_icon in 'FOR' loop in icons_list dict: {title_bar_icon}")

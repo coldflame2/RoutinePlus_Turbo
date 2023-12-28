@@ -2,7 +2,7 @@ import logging
 import os
 
 from PyQt6.QtCore import QPoint, QTimer, Qt, pyqtSignal
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
 
 from src.resources.styles import all_styles
@@ -29,7 +29,7 @@ class TitleBar(QWidget):
         self.setup_min_max_close_buttons()
 
         self.main_window.window_state_changed.connect(self.update_maximize_restore_icon)
-
+        self.setup_title_bar_icon()
         # Add all the widgets to the 'self' QWidget
         self.add_widgets()
         self.apply_styles()
@@ -37,13 +37,13 @@ class TitleBar(QWidget):
     def setup_title_bar_layout(self):
         self.main_layout = QHBoxLayout()
         self.setFixedHeight(38)
-        self.main_layout.setContentsMargins(0, 0, 0, 1)  # left, top, right, bottom
+        self.main_layout.setContentsMargins(2, 0, 0, 1)  # left, top, right, bottom
         self.main_layout.setSpacing(0)
 
         self.container_widget = QWidget()
         self.container_widget.setObjectName("containerWidget")
         self.container_layout = QHBoxLayout()
-        self.container_layout.setContentsMargins(0, 4, 3, 1)  # left, top, right, bottom
+        self.container_layout.setContentsMargins(10, 4, 3, 1)  # left, top, right, bottom
         self.container_layout.setSpacing(0)
 
     def setup_text_label_for_title_bar(self):
@@ -84,15 +84,30 @@ class TitleBar(QWidget):
         self.close_button = QPushButton('')
         self.close_button.setObjectName("closeTitleButton")
         self.close_button.setToolTip("Close")
-        self.close_button.setStyleSheet(all_styles.CLOSE_BUTTON)
         close_icon_path = helper_fn.resource_path(os.path.join('resources/icons/title_bar_icons', 'close_icon.png'))
         self.close_button.setIcon(QIcon(close_icon_path))
         self.close_button.clicked.connect(lambda: self.close_title_bar_clicked_signal.emit("Title bar"))
 
         logging.debug(f" custom_title constructor initialized.")
 
+    def setup_title_bar_icon(self):
+        env_class = helper_fn.get_environment_cls(False, caller='sidebar.py')
+        icon_name = env_class.ICON_NAME
+        icon_folders_relative = 'resources/icons/others/'
+        icon_path = helper_fn.resource_path(os.path.join(icon_folders_relative, icon_name))
+
+        # Create a new QLabel for the icon
+        self.icon_label = QLabel()
+        pixmap = QPixmap(icon_path)
+        scaled_pixmap = pixmap.scaled(
+            20, 20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+            )
+        self.icon_label.setPixmap(scaled_pixmap)
+
     def add_widgets(self):
         # Add the widgets to the container_layout
+        self.container_layout.addWidget(self.icon_label)
+
         self.container_layout.addWidget(self.title)
         self.container_layout.addStretch(1)  # To expand or contract as the window is resized.
         self.container_layout.addWidget(self.minimize_tray)

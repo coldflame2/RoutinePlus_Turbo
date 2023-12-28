@@ -10,8 +10,8 @@ from src.resources.styles import all_styles
 from src.utils import helper_fn
 
 
-class LeftBar(QObject):
-    left_bar_signals = pyqtSignal(str)
+class Sidebar(QObject):
+    button_click_signals = pyqtSignal(str)
     button_hover_changed = pyqtSignal(object, bool)  # New signal for hover state
 
     def __init__(self):
@@ -20,6 +20,8 @@ class LeftBar(QObject):
 
     def setup_layout(self):
         self.left_widget = QWidget()
+        self.left_widget.setObjectName("Sidebar")
+        self.left_widget.setStyleSheet(all_styles.SIDEBAR)
         self.left_layout = QVBoxLayout(self.left_widget)
         self.left_widget.setMinimumWidth(130)
 
@@ -30,7 +32,7 @@ class LeftBar(QObject):
         self.left_layout.addLayout(self.layout_buttons_above)
         self.left_layout.addLayout(self.layout_buttons_below)
 
-        self.left_layout.setContentsMargins(0, 1, 0, 0)  # Left, Top, Right, Bottom margins
+        self.left_layout.setContentsMargins(5, 1, 0, 0)  # Left, Top, Right, Bottom margins
         self.left_layout.setSpacing(10)  # between widgets in left layout (so, between last top button and first bottom button)
 
         self.layout_buttons_above.setContentsMargins(0, 0, 0, 0)
@@ -51,7 +53,8 @@ class LeftBar(QObject):
         self.header_layout = QHBoxLayout()
         self.header_layout.setSpacing(0)
         self.header_layout.setContentsMargins(3, 1, 1, 1)
-        env_class = helper_fn.get_environment_cls(False, caller='left_bar.py')
+
+        env_class = helper_fn.get_environment_cls(False, caller='sidebar.py')
         icon_name = env_class.ICON_NAME
         icon_folders_relative = 'resources/icons/others/'
         icon_path = helper_fn.resource_path(os.path.join(icon_folders_relative, icon_name))
@@ -60,7 +63,7 @@ class LeftBar(QObject):
         self.icon_label = QLabel()
         pixmap = QPixmap(icon_path)
         scaled_pixmap = pixmap.scaled(
-            32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+            5, 5, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
             )
         self.icon_label.setPixmap(scaled_pixmap)
 
@@ -97,8 +100,8 @@ class LeftBar(QObject):
             {"display_name": "+ Task", "action_name": "New Task", "tool_tip": "Add a new task"},
             {"display_name": "+ QuickTask", "action_name": "New QuickTask", "tool_tip": "Add a new QuickTask"},
             {"display_name": "Preferences", "action_name": "Settings", "tool_tip": "Modify app preferences"},
-            {"display_name": "Test", "action_name": "Testing", "tool_tip": "Testing"},
-            {"display_name": "Reset", "action_name": "Reset", "tool_tip": "Testing2"},
+            {"display_name": "Test", "action_name": "Test", "tool_tip": "Test"},
+            {"display_name": "Reset", "action_name": "Reset", "tool_tip": "Reset"},
             ]
 
         secondary_buttons_names = [
@@ -143,10 +146,6 @@ class LeftBar(QObject):
         button.installEventFilter(self)
         return button
 
-    def emit_signal(self, action):
-        logging.debug(f"Emitting '{action}' signal from LeftBar.")
-        self.left_bar_signals.emit(action)
-
     def set_button_icon(self, button, action_name):
         """
         Sets an icon for the button if available.
@@ -163,12 +162,13 @@ class LeftBar(QObject):
         Generates and returns the icon path for a given action.
         """
         icon_name = action_name.replace(" ", "").lower() + "_icon"
-        icon_folders_relative = 'resources/icons/left_bar_icons'
+        icon_folders_relative = 'resources/icons/sidebar_icons'
         icon_path = helper_fn.resource_path(os.path.join(icon_folders_relative, icon_name))
         return helper_fn.resource_path(icon_path)
 
-    def handle_actions_here(self, action):
-        pass
+    def emit_signal(self, action):
+        logging.debug(f"Emitting '{action}' signal from LeftBar.")
+        self.button_click_signals.emit(action)
 
     def eventFilter(self, obj, event):
         if isinstance(obj, QPushButton):

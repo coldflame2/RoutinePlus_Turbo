@@ -11,10 +11,13 @@ from src.utils import helper_fn
 class TableDelegate(QStyledItemDelegate):
     def __init__(self, view, parent=None):
         super().__init__(parent)
+
         self.view = view
         self.row_type_dict = {}  # {row index:type}
-        self.is_button_hovered = {}  # {button_name: True/False}
+        self.selected_row_on_btn_hover = {}  # {selected_row: True/False}
         self.selected_row = None
+        self.hovered_row = None
+        self.clicked_index = None
 
         self.opacity = 0.0
 
@@ -24,36 +27,35 @@ class TableDelegate(QStyledItemDelegate):
 
         logging.debug(f"TableDelegate class constructor starting. Nothing in TableDelegate constructor.")
 
-    def increment_opacity(self):
-        if self.opacity < 1.0:
-            self.opacity += 0.1  # Increment opacity; adjust for different speed
-            self.view.viewport().update()  # Trigger a repaint
-        else:
-            self.opacity -= 0.1  # Stop the timer if full opacity is reached
-            self.view.viewport().update()  # Trigger a repaint
+    def update_selected_row_on_btn_hover(self, selected_row, is_btn_hovered):
+        # This method is called every time mouse enters or leaves the "new task" button on Sidebar
+        #
 
-
-
-    def set_button_hovered(self, selected_row, is_hovered):
-        if selected_row is not None:
-            self.opacity = 0.0
-            self.selected_row = selected_row
-
-            self.is_button_hovered[selected_row] = is_hovered
-            current_index = self.view.model().index(selected_row, 0)  # Assuming 0 is a valid column
-            next_index = self.view.model().index(selected_row + 1, 0)
-            self.view.update(current_index)  # Update current row
-            if next_index.isValid():
-                self.view.update(next_index)  # Update next row
-
-            if is_hovered is False:
-                self.selected_row = None
-                self.opacity = 0.0
-                self.animation_timer.start(50)  # Adjust the interval for smoother or faster animation
-
-        else:
-            self.is_button_hovered.pop(selected_row, None)
+        # Reset if no row is selected or when hover state is false
+        if selected_row is None or not is_btn_hovered:  # No selected row and btn isn't hovered
+            print(f"Can't say either row is selected or btn is hovered or both.")
             self.selected_row = None
+            self.opacity = 0.0
+            if not is_btn_hovered:  # Not hovered
+                print(f"Btn is definitely not hovered. A row might or might not be selected.")
+                self.animation_timer.start(50)  # Adjust for animation speed
+            return
+
+        print(f"BOTH: A row is selected and button is hovered.")
+
+        # Update settings for the hovered row
+        self.opacity = 1.0
+        self.selected_row = selected_row
+        self.selected_row_on_btn_hover[selected_row] = is_btn_hovered
+
+        # Update the current and next row if valid
+        for row in [selected_row, selected_row + 1]:
+            index = self.view.model().index(row, 0)
+            if index.isValid():
+                self.view.update(index)
+
+    def update_hovered_row(self, hovered_row):
+        self.hovered_row = hovered_row
 
     def update_row_type_dict(self, model):
         for row in range(model.rowCount()):
@@ -86,16 +88,17 @@ class TableDelegate(QStyledItemDelegate):
         self.paint_state(painter, option, index, text_in_cell)  # Draw line and fill color
 
         if self.selected_row is not None and index.column() in [1]:
-            self.paint_new_row_hint(painter, option, index)
+            self.draw_arrow(painter, option, index)
 
-        painter.restore()
+        if self.hovered_row is not None and index.column() in [0, 1]:
+            self.draw_plus_sign(painter, option, index, self.hovered_row)
 
-    def paint_new_row_hint(self, painter, option, index):
+    def draw_arrow(self, painter, option, index):
         if index.row() == self.selected_row:
             self.draw_h_line_bottom(painter, option.rect, "#8791AB", 10)
 
         if index.row() == self.selected_row + 1:
-            if self.is_button_hovered.get(self.selected_row, False):
+            if self.selected_row_on_btn_hover.get(self.selected_row, False):
                 # Get the image path
                 image_path = helper_fn.resource_path("resources/images/arrow.png")
 
@@ -107,7 +110,6 @@ class TableDelegate(QStyledItemDelegate):
                     image_width = 20
                     image_height = 20
                     try:
-                        padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 5)
                         x_position = int(option.rect.x() + (option.rect.width() - image_width) / 2)
                         y_position = int(option.rect.y() + (option.rect.height() - 40 - image_height) / 2)
 
@@ -157,11 +159,11 @@ class TableDelegate(QStyledItemDelegate):
             color = "#DCEAEA"
             fill_rect = helper_fn.add_padding(option.rect, 1, 2, 0, 1)
 
-        else:  # For other rows
+        elif index.row() < total_rows - 1:  # Rows in between
             if self.row_type_dict.get(index.row()) == 'QuickTask':  # QuickTask rows
                 color = "#EAF9F9"
                 fill_rect = helper_fn.add_padding(option.rect, 1, 1, 0, 0)
-            else:  # Main task rows
+            elif self.row_type_dict.get(index.row()) == 'main':  # Main task rows
                 color = "#F0FFFF"
                 fill_rect = helper_fn.add_padding(option.rect, 1, 1, 0, 0)
 
@@ -227,6 +229,7 @@ class TableDelegate(QStyledItemDelegate):
 
     def paint_selected_state(self, painter, option, index):
         if self.view and self.view.clicked_index == index:  # Selected Cell
+            print("this one")
             padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 0)
             self.fill_rect_with_color(painter, option, padded_rect, "#DAE6F7")
 
@@ -234,6 +237,7 @@ class TableDelegate(QStyledItemDelegate):
             self.draw_h_line_bottom(painter, padded_rect, "#36436A", 2)
 
         elif self.view.clicked_index != index:  # Selected row
+            print(f"Selected row")
             padded_rect = helper_fn.add_padding(option.rect, 0, 0, 0, 1)
             self.draw_v_line_left(painter, padded_rect, "#EAF9F9", 5)
             self.fill_rect_with_color(painter, option, padded_rect, "#403E59")
@@ -246,7 +250,26 @@ class TableDelegate(QStyledItemDelegate):
     def paint_hover_state(self, painter, option):
         padded_rect = helper_fn.add_padding(option.rect, 0, 1, 0, 0)
         self.fill_rect_with_color(painter, option, padded_rect, "#36436A")
+
         painter.setPen(QColor('white'))
+
+    def draw_plus_sign(self, painter, option, index, hovered_row):
+
+        if index.row() == self.hovered_row + 1:
+            plus_sign_size = 10  # Adjust size as needed
+
+            # Calculate the center of the current row (which is the next row after the hovered row)
+            center_x = int(option.rect.center().x())
+            center_y = int(option.rect.center().y())
+
+            # Set pen for drawing the plus sign
+            painter.setPen(QPen(QColor('blue'), 2))  # Adjust color and thickness as needed
+
+            # Draw vertical line of the plus sign
+            painter.drawLine(center_x, center_y - plus_sign_size // 2, center_x, center_y + plus_sign_size // 2)
+
+            # Draw horizontal line of the plus sign
+            painter.drawLine(center_x - plus_sign_size // 2, center_y, center_x + plus_sign_size // 2, center_y)
 
     def fill_rect_with_color(self, painter, option, rect_fill, color):
         painter.fillRect(rect_fill, QColor(color))
@@ -282,3 +305,11 @@ class TableDelegate(QStyledItemDelegate):
         painter.drawLine(rect_line.topLeft(), rect_line.bottomLeft())
 
         self.view.viewport().update()
+
+    def increment_opacity(self):
+        if self.opacity < 1.0:
+            self.opacity += 0.1  # Increment opacity; adjust for different speed
+            self.view.viewport().update()  # Trigger a repaint
+        else:
+            self.opacity -= 0.1  # Stop the timer if full opacity is reached
+            self.view.viewport().update()  # Trigger a repaint

@@ -5,7 +5,7 @@ import traceback
 
 from PyQt6.QtGui import QIcon
 # PyQt
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox, QStyleFactory
 
 # This app's utilities and resources
 from src.utils import helper_fn
@@ -22,6 +22,7 @@ class MainApp(QApplication):
     def __init__(self):
         super().__init__(sys.argv)
         self._get_and_set_app_info()
+        self.setStyle('Fusion')
 
     def set_controller_and_view(self, controller, table_view):
         self.controller = controller

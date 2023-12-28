@@ -8,49 +8,56 @@ class Controller:
     def __init__(self, model, table_view):
         self.model = model
         self.table_view = table_view
-
         self.action_map = self._mapping()
-
+        self.backup = None
         self.processor = Processor(model, table_view)
 
     def new_task(self):
         logging.debug("New Task requested in controller.")
-        selected_row = self.processor.get_selected_row()
-
-        if not self.processor.is_valid_task_row(selected_row):
-            logging.debug(f"Selected row ({selected_row}) is invalid for a new task.")
+        selected_row = self._validate_and_backup_for_new_task()
+        if selected_row is None:
             return
 
-        # Backup the current state
         backup = self.model.backup_state()
 
         try:
-            new_task_data = self.processor.calculate_new_task_data(selected_row)
-
-            data_below_new = self.model.auto_time_updater.data_after_new_task(selected_row, new_task_data)
-
-            if not (new_task_data and data_below_new):
-                logging.error("New task data or data for row below new task is missing.")
-                return
-
-            # Perform insert new task
-            insert_successful = self.model.tasker_model.insert_new_task(selected_row + 1, new_task_data)
-
-            if insert_successful is not True:
-                logging.error(f"Inserting new task wasn't successful")
-                return
-
-            # Perform update after new task operation
-            self.model.auto_time_updater.update_after_new_task(data_below_new)
-
+            new_task_data, data_below_new = self._data_retrieval(selected_row)
         except Exception as e:
-            logging.error(f"Exception occurred: {type(e)}. Error: {e}")
-
-            # Rollback to the previous state
-            self.model.rollback_state(backup)
+            self._handle_data_retrieval_exception(e)
             return
 
-        logging.debug("New task added and subsequent row updated successfully.")
+        try:
+            self._insert_and_update(selected_row, new_task_data, data_below_new, backup)
+        except Exception as e:
+            self._handle_insert_and_update_exception(e, backup)
+
+    def _data_retrieval(self, selected_row):
+        new_task_data = self.processor.calculate_new_task_data(selected_row)
+        data_below_new = self.model.auto_time_updater.data_after_new_task(selected_row, new_task_data)
+
+        if not (new_task_data and data_below_new):
+            logging.error("New task data or data for row below new task is missing.")
+            raise Exception("Data retrieval failed")
+
+        return new_task_data, data_below_new
+
+    def _insert_and_update(self, selected_row, new_task_data, data_below_new, backup):
+        insert_successful = self.model.tasker_model.insert_new_task(selected_row + 1, new_task_data)
+        if insert_successful is not True:
+            logging.error("Inserting new task wasn't successful")
+            self.model.rollback_state(backup)
+            raise Exception("Insert failed")
+        # Perform update after new task operation
+        self.model.auto_time_updater.update_after_new_task(data_below_new)
+
+    def _validate_and_backup_for_new_task(self):
+        selected_row = self.processor.get_selected_row()
+        if not self.processor.is_valid_task_row(selected_row):
+            return None
+
+        # Backup the current state
+        self.backup = self.model.backup_state()
+        return selected_row
 
     def new_quick_task(self):
         logging.debug("New QuickTask requested in controller.")
@@ -131,7 +138,6 @@ class Controller:
             self.model.rollback_state(backup_before_delete)
             return
 
-
     def save_all(self):
         logging.debug(f"Save data requested in controller.")
         self.model.save_to_database_file()
@@ -159,22 +165,22 @@ class Controller:
             'New Task': self.new_task,
             'New QuickTask': self.new_quick_task,
             'Delete': self.delete_task,
-            'Testing': self.testing,
+            'Test': self.testing,
             'Reset': self.request_clearing_model,
 
         }  # Action:Method
         return action_map
 
-    def signal_from_left_bar(self, action):
-        logging.debug(f"Catching Signal '{action}' from LeftBar.")
+    def sidebar_btn_clicked_signals(self, action):  # Called from MainWindow
+        logging.debug(f"Catching Signal '{action}' from Sidebar.")
         method_to_call = self.return_method_for_action(action)
         method_to_call()
 
-    def button_hover_state(self, action_name, bool_value):
-        selected_row = self.processor.get_selected_row()
+    def sidebar_btn_hovered_signals(self, action_name, bool_value):  # Called from MainWindow
         if action_name in self.action_map:
-            if action_name == 'New Task':
-                self.table_view.set_hover_state(selected_row, bool_value)
+            if action_name == 'Test':
+                self.testing()
+                # self.table_view.table_state.update_btn_hover_state(bool_value)
 
     def testing(self):
         logging.debug(f"Testing. Controller.")
@@ -218,3 +224,12 @@ class Controller:
             self.model.default_state()
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
+
+    def _handle_data_retrieval_exception(self, e):
+        logging.error(f"Exception type:{type(e)} when calculating data for new task. Error:{e}")
+        return None
+
+    def _handle_insert_and_update_exception(self, e, backup):
+        logging.error(f"Exception type:{type(e)} when inserting new task. Error:{e}")
+        self.model.rollback_state(backup)
+        return

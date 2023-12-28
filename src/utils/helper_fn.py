@@ -149,13 +149,15 @@ def calculate_start_time(end_time, duration):
     return end_time
 
 
-def add_padding(rect, left, top, right, bottom):
+def add_padding(rect, padding):
+    left, top, right, bottom = padding
     return QRect(
         rect.left() + left,
         rect.top() + top,
         rect.width() - left - right,
         rect.height() - top - bottom
     )
+
 
 
 def ordinal_suffix(n):
