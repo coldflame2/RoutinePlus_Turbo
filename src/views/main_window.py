@@ -109,7 +109,6 @@ class MainWindow(QMainWindow):
         self.sidebar.button_click_signals.connect(self.controller.sidebar_btn_clicked_signals)
         self.sidebar.button_hover_changed.connect(self.controller.sidebar_btn_hovered_signals)
 
-
     def _configure_title_bar(self):
         self.title_bar.update()
         self.title_bar.minimize_tray_title_bar_clicked_signal.connect(self.minimize_to_tray)
@@ -117,14 +116,14 @@ class MainWindow(QMainWindow):
         self.title_bar.maximize_title_bar_clicked_signal.connect(self.toggle_maximize_restore)
         self.title_bar.close_title_bar_clicked_signal.connect(
             lambda: self.close_requested_signal.emit("Title Bar")
-            )
+        )
 
     def _setup_win_properties(self):
         self.restore_state()
         self.restore_geometry()
         self.setStyleSheet(all_styles.MAIN_WINDOW_STYLE)
         self.setWindowTitle(self.env_config_class.APP_NAME)  # Keep this, even though visible win title is custom.
-        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, False)
 
         title_bar_icon_relative_path = (os.path.join('resources/icons/title_bar_icons', self.env_config_class.ICON_NAME))
         self.icon_path = helper_fn.resource_path(title_bar_icon_relative_path)
@@ -194,6 +193,7 @@ class MainWindow(QMainWindow):
         super().changeEvent(event)
         if event.type() == QEvent.Type.WindowStateChange:
             self.window_state_changed.emit()
+
 
 class HoverSplitter(QSplitter):
     def createHandle(self) -> QSplitterHandle:

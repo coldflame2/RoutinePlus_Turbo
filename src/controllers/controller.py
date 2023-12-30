@@ -1,6 +1,8 @@
 import logging
 
-from controllers.processor import Processor
+from controllers.TaskControllers import DeleteTaskController
+from controllers.TaskControllers import NewQuickTaskAdder
+from controllers.TaskControllers import NewMainTaskAdder
 from resources.default import Columns
 
 
@@ -8,135 +10,29 @@ class Controller:
     def __init__(self, model, table_view):
         self.model = model
         self.table_view = table_view
-        self.action_map = self._mapping()
-        self.backup = None
-        self.processor = Processor(model, table_view)
 
-    def new_task(self):
-        logging.debug("New Task requested in controller.")
-        selected_row = self._validate_and_backup_for_new_task()
-        if selected_row is None:
-            return
+    def create_action_method_map(self):
+        return {
+            'Save': self.save_all,
+            'Save As': self.save_as,
+            'New Task': self.new_maintask,
+            'New QuickTask': self.new_quicktask,
+            'Delete': self.delete_task,
+            'Test': self.testing,
+            'Reset': self.request_clearing_model,
+            }
 
-        backup = self.model.backup_state()
+    def new_maintask(self):
+        logging.debug("New Main Task requested in controller.")
+        NewMainTaskAdder.start_new_maintask(self.model, self.table_view)
 
-        try:
-            new_task_data, data_below_new = self._data_retrieval(selected_row)
-        except Exception as e:
-            self._handle_data_retrieval_exception(e)
-            return
-
-        try:
-            self._insert_and_update(selected_row, new_task_data, data_below_new, backup)
-        except Exception as e:
-            self._handle_insert_and_update_exception(e, backup)
-
-    def _data_retrieval(self, selected_row):
-        new_task_data = self.processor.calculate_new_task_data(selected_row)
-        data_below_new = self.model.auto_time_updater.data_after_new_task(selected_row, new_task_data)
-
-        if not (new_task_data and data_below_new):
-            logging.error("New task data or data for row below new task is missing.")
-            raise Exception("Data retrieval failed")
-
-        return new_task_data, data_below_new
-
-    def _insert_and_update(self, selected_row, new_task_data, data_below_new, backup):
-        insert_successful = self.model.tasker_model.insert_new_task(selected_row + 1, new_task_data)
-        if insert_successful is not True:
-            logging.error("Inserting new task wasn't successful")
-            self.model.rollback_state(backup)
-            raise Exception("Insert failed")
-        # Perform update after new task operation
-        self.model.auto_time_updater.update_after_new_task(data_below_new)
-
-    def _validate_and_backup_for_new_task(self):
-        selected_row = self.processor.get_selected_row()
-        if not self.processor.is_valid_task_row(selected_row):
-            return None
-
-        # Backup the current state
-        self.backup = self.model.backup_state()
-        return selected_row
-
-    def new_quick_task(self):
+    def new_quicktask(self):
         logging.debug("New QuickTask requested in controller.")
-        selected_row = self.processor.get_selected_row()
-
-        if not self.processor.is_valid_row(selected_row):
-            logging.debug(f"Selected row is invalid. Selected row: {selected_row}")
-            return
-
-        # Backup the current state
-        backup = self.model.backup_state()
-
-        try:
-            new_quick_task_data = self.processor.calculate_new_quick_task_data(selected_row)
-
-            if not new_quick_task_data:
-                logging.debug("New quick task data is missing.")
-                return
-
-            logging.debug(f"New quick task data calculated. Data: {new_quick_task_data}")
-
-            # Perform the insert operation
-            insert_successful = self.model.tasker_model.insert_new_task(selected_row + 1, new_quick_task_data)
-
-            if insert_successful is not True:
-                logging.error(f" Inserting QuickTask wasn't successful")
-                return
-
-            self.model.auto_time_updater.update_after_new_quick_task(selected_row, new_quick_task_data)
-
-        except Exception as e:
-            logging.error(f"Exception occurred: {type(e)}. Error: {e}")
-
-            # Rollback to the previous state
-            self.model.rollback_state(backup)
-            return
-
-        logging.debug("New quick task added successfully.")
+        NewQuickTaskAdder.start_new_quicktask(self.model, self.table_view)
 
     def delete_task(self):
-
         logging.debug(f"'Delete Task' requested in controller.")
-        selected_row = self.processor.get_selected_row()
-
-        if not self.processor.is_row_deletable(selected_row):
-            logging.debug(f"Selected row ({selected_row}) is invalid for deletion.")
-
-        # Backup the current state
-        backup_before_delete = self.model.backup_state()
-
-        try:
-            # Get data for replaced row (row that will replace the to-be deleted row index)
-            replaced_row_data = self.model.auto_time_updater.calculate_data_after_deletion(selected_row)
-
-            if not replaced_row_data:
-                logging.error(f"Replaced Row Data is missing.")
-                return
-
-            # Perform Delete operation
-            delete_successful = self.model.tasker_model.delete_row_and_data(selected_row)
-
-            if delete_successful is not True:
-                logging.error(f"Error While Deleting {selected_row} row.")
-                return
-
-            if self.model.get_item_from_model(selected_row, Columns.Type.value) == 'QuickTask':
-
-                # Update only positions
-                self.model.auto_time_updater.update_positions(selected_row, "delete")
-            else:
-                # Update the start time and duration of the row below the deleted row
-                self.model.auto_time_updater.update_after_delete_task(replaced_row_data)
-
-            logging.debug(f"Row {selected_row} deleted from model and SQLite database.")
-
-        except Exception as e:
-            logging.error(f"Exception type: (type{e}). Error:{e}")
-            self.model.rollback_state(backup_before_delete)
-            return
+        DeleteTaskController.start_deleting_task(self.model, self.table_view)
 
     def save_all(self):
         logging.debug(f"Save data requested in controller.")
@@ -145,39 +41,24 @@ class Controller:
     def save_as(self):
         logging.debug(f"'Save As' requested in controller. Not implemented yet")
 
-    def return_method_for_action(self, action):
-        if action in self.action_map:
-            logging.debug(f"Action '{action}' found in action_map.")
-            try:
-                method_to_call = self.action_map[action]
-                logging.debug(f"Returning the method '{method_to_call.__name__}' for action '{action}'.")
-                return method_to_call
-            except Exception as e:
-                logging.error(
-                    f" Exception type:{type(e)} while calling action_map with action name {action} (Description:{e}"
-                )
-                return None
-
-    def _mapping(self):
-        action_map = {
-            'Save': self.save_all,
-            'Save As': self.save_as,
-            'New Task': self.new_task,
-            'New QuickTask': self.new_quick_task,
-            'Delete': self.delete_task,
-            'Test': self.testing,
-            'Reset': self.request_clearing_model,
-
-        }  # Action:Method
-        return action_map
+    def get_method_for_action(self, action):
+        logging.debug(f"Getting method for action: {action}")
+        action_method_map = self.create_action_method_map()
+        method = action_method_map.get(action)
+        if method:
+            logging.debug(f"Method '{method.__name__}' found for action '{action}'.")
+            return method
+        else:
+            logging.error(f"No method found for action '{action}'.")
+            return None
 
     def sidebar_btn_clicked_signals(self, action):  # Called from MainWindow
         logging.debug(f"Catching Signal '{action}' from Sidebar.")
-        method_to_call = self.return_method_for_action(action)
+        method_to_call = self.get_method_for_action(action)
         method_to_call()
 
     def sidebar_btn_hovered_signals(self, action_name, bool_value):  # Called from MainWindow
-        if action_name in self.action_map:
+        if action_name in self.create_action_method_map():
             if action_name == 'Test':
                 self.testing()
                 # self.table_view.table_state.update_btn_hover_state(bool_value)
@@ -225,11 +106,4 @@ class Controller:
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
 
-    def _handle_data_retrieval_exception(self, e):
-        logging.error(f"Exception type:{type(e)} when calculating data for new task. Error:{e}")
-        return None
 
-    def _handle_insert_and_update_exception(self, e, backup):
-        logging.error(f"Exception type:{type(e)} when inserting new task. Error:{e}")
-        self.model.rollback_state(backup)
-        return

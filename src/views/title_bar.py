@@ -34,6 +34,8 @@ class TitleBar(QWidget):
         self.add_widgets()
         self.apply_styles()
 
+        self.hide()  # hide it temporarily
+
     def setup_title_bar_layout(self):
         self.main_layout = QHBoxLayout()
         self.setFixedHeight(38)
