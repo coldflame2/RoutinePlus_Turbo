@@ -15,23 +15,29 @@ class Controller:
         return {
             'Save': self.save_all,
             'Save As': self.save_as,
-            'New Task': self.new_maintask,
-            'New QuickTask': self.new_quicktask,
-            'Delete': self.delete_task,
+            'New MainTask': self.process_new_maintask,
+            'New QuickTask': self.process_new_quicktask,
+            'Delete': self.process_delete_task,
             'Test': self.testing,
             'Reset': self.request_clearing_model,
             }
 
-    def new_maintask(self):
-        logging.debug("New Main Task requested in controller.")
-        NewMainTaskAdder.start_new_maintask(self.model, self.table_view)
+    def process_new_maintask(self):
+        """
+        Flow:
+        MainTaskAdder > start_new_maintask > validate selected row >
+        _data_retrieval
+        :return:
+        """
+        logging.debug("Processing new MainTask from controller.")
+        NewMainTaskAdder.initiate_maintask_addition(self.model, self.table_view)
 
-    def new_quicktask(self):
-        logging.debug("New QuickTask requested in controller.")
+    def process_new_quicktask(self):
+        logging.debug("Processing new QuickTask from controller.")
         NewQuickTaskAdder.start_new_quicktask(self.model, self.table_view)
 
-    def delete_task(self):
-        logging.debug(f"'Delete Task' requested in controller.")
+    def process_delete_task(self):
+        logging.debug(f"Processing delete task from controller.")
         DeleteTaskController.start_deleting_task(self.model, self.table_view)
 
     def save_all(self):
@@ -41,8 +47,18 @@ class Controller:
     def save_as(self):
         logging.debug(f"'Save As' requested in controller. Not implemented yet")
 
-    def get_method_for_action(self, action):
-        logging.debug(f"Getting method for action: {action}")
+    def sidebar_btn_clicked_signals(self, action):  # Called from MainWindow
+        logging.debug(f"Catching Signals from Sidebar. (Action:'{action}')")
+        method_to_call = self._get_method_for_action(action)
+        method_to_call()
+
+    def sidebar_btn_hovered_signals(self, action_name, bool_value):  # Called from MainWindow
+        if action_name in self.create_action_method_map():
+            if action_name == 'Test':
+                self.testing()
+                # self.table_view.table_state.update_btn_hover_state(bool_value)
+
+    def _get_method_for_action(self, action):
         action_method_map = self.create_action_method_map()
         method = action_method_map.get(action)
         if method:
@@ -52,23 +68,11 @@ class Controller:
             logging.error(f"No method found for action '{action}'.")
             return None
 
-    def sidebar_btn_clicked_signals(self, action):  # Called from MainWindow
-        logging.debug(f"Catching Signal '{action}' from Sidebar.")
-        method_to_call = self.get_method_for_action(action)
-        method_to_call()
-
-    def sidebar_btn_hovered_signals(self, action_name, bool_value):  # Called from MainWindow
-        if action_name in self.create_action_method_map():
-            if action_name == 'Test':
-                self.testing()
-                # self.table_view.table_state.update_btn_hover_state(bool_value)
-
     def testing(self):
-        logging.debug(f"Testing. Controller.")
-        print(f"Testing. Controller.")
+        logging.debug(f"Controller: Testing.")
+        print(f"Controller: Testing.")
 
         self.calculate_total_duration()
-        # self.model.default_state()
 
     def calculate_total_duration(self):
         total_duration = 0
@@ -100,7 +104,6 @@ class Controller:
         print(f"Total Duration: {total_duration}")
 
     def request_clearing_model(self):
-        # Clear the model
         try:
             self.model.default_state()
         except Exception as e:

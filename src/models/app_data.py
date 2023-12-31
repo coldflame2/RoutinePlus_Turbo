@@ -77,7 +77,7 @@ class AppData:
         for row_data in cursor.fetchall():
             # check data type of each value in the row
 
-            if row_data[Columns.Type.value] == 'main':
+            if row_data[Columns.Type.value] == 'MainTask':
                 row_data[Columns.StartTime.value] = helper_fn.str_to_dt(
                     row_data[Columns.StartTime.value])
 

@@ -58,7 +58,7 @@ DEFAULT_TASKS = (
         Columns.Duration.value: 420,
         Columns.Name.value: 'Sleep/Wake up',
         Columns.Reminder.value: convert_to_datetime('12:00 AM'),
-        Columns.Type.value: 'main',
+        Columns.Type.value: 'MainTask',
         Columns.Position.value: 1
     },
     {
@@ -68,7 +68,7 @@ DEFAULT_TASKS = (
         Columns.Duration.value: 1020,
         Columns.Name.value: 'Last',
         Columns.Reminder.value: convert_to_datetime('07:00 AM'),
-        Columns.Type.value: 'main',
+        Columns.Type.value: 'MainTask',
         Columns.Position.value: 2
     },
 )

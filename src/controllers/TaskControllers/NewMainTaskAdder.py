@@ -3,60 +3,71 @@ import logging
 from controllers.TaskControllers import TaskUtilityService
 
 
-def start_new_maintask(model, view):
-    selected_row = _validate_selected_row(model, view)
-    if selected_row is None:
+def initiate_maintask_addition(model, view):
+    clicked_row = TaskUtilityService.get_clicked_row(model, view)
+
+    if clicked_row is None:
         return
 
-    backup = model.backup_state()
+    state_backup = model.backup_state()
 
     try:
-        new_task_data, data_below_new = _data_retrieval(selected_row, model)
+        data_for_update = _prepare_data_for_task_insertion(clicked_row, model)
+
     except Exception as e:
-        _handle_data_retrieval_exception(e)
+        logging.error(f"Error at Data Retrieval during NewTask insert operation. Type:{type(e)}. Error: "
+                      f"{e}")
         return
 
     try:
-        _insert_and_update(selected_row, new_task_data, data_below_new, backup, model)
+        _insert_and_update(clicked_row, data_for_update, model)
+
     except Exception as e:
-        _handle_insert_and_update_exception(e, backup, model)
+        logging.error(f"{e} Error. Type:{type(e)} during NewTask insert operation.")
+        model.rollback_state(state_backup)
+        return
 
 
-def _data_retrieval(selected_row, model):
-    new_task_data = TaskUtilityService.calculate_new_task_data(selected_row, model)
-    data_below_new = model.auto_time_updater.data_after_new_task(selected_row, new_task_data)
+def _prepare_data_for_task_insertion(clicked_row, model):
+    try:
+        linked_maintask = TaskUtilityService.find_linked_maintask(model, clicked_row)
 
-    if not (new_task_data and data_below_new):
-        logging.error("New task data or data for row below new task is missing.")
-        raise Exception("Data retrieval failed")
+        updates_linked_maintask = model.auto_timeUpdater.calculate_updates_linked_maintask(linked_maintask)
 
-    return new_task_data, data_below_new
+        print(f"data_linked_mainTaskRow:{updates_linked_maintask}")
 
+        data_new_maintask = TaskUtilityService.calculate_data_new_maintask(model, linked_maintask, updates_linked_maintask)
 
-def _insert_and_update(selected_row, new_task_data, data_below_new, backup, model):
-    insert_successful = model.tasker_model.insert_new_task(selected_row + 1, new_task_data)
-    if insert_successful is not True:
-        logging.error("Inserting new task wasn't successful")
-        model.rollback_state(backup)
-        raise Exception("Insert failed")
-    # Perform update after new task operation
-    model.auto_time_updater.update_after_new_task(data_below_new)
+        # IMPORTANT! For now, there is no change in shifted_task (as the new task takes its duration from
+        # clicked or linked_maintask)
+        updates_for_shifted_task = model.auto_timeUpdater.calculate_updates_tobe_shifted_maintask(clicked_row, data_new_maintask)
 
+    except Exception as e:
+        logging.error(f"Error during data retrieval. Type: {type(e)}. Error:{e}")
+        raise e
 
-def _validate_selected_row(model, table_view):
-    selected_row = TaskUtilityService.get_selected_row(table_view)
-    if not TaskUtilityService.is_valid_task_row(model, selected_row):
-        return None
-
-    return selected_row
+    prepared_data = (data_new_maintask, updates_linked_maintask, updates_for_shifted_task)
+    return prepared_data
 
 
-def _handle_data_retrieval_exception(e):
-    logging.error(f"Exception type:{type(e)} when calculating data for new task. Error:{e}")
-    return None
+def _insert_and_update(clicked_row, data_for_update, model):
+    # Insert New Row
+    try:
+        model.model_utility_service.insert_row_with_data(clicked_row + 1, data_for_update[0])
+    except Exception as e:
+        logging.error(f"Inserting new MainTask Failed. Type:{type(e)}. Error:{e}")
+        raise e
 
+    # Update data in selected row
+    try:
+        model.auto_timeUpdater.update_linked_maintask(data_for_update[1])
+    except Exception as e:
+        logging.error(f"Inserting new MainTask Failed. Type:{type(e)}. Error:{e}")
+        raise e
 
-def _handle_insert_and_update_exception(e, backup, model):
-    logging.error(f"Exception type:{type(e)} when inserting new task. Error:{e}")
-    model.rollback_state(backup)
-    return
+    # Update data in row below new
+    try:
+        model.auto_timeUpdater.update_shifted_maintask(data_for_update[2])
+    except Exception as e:
+        logging.error(f"Error when updating after new task was added. Exception type: {type(e)}. Error:{e}")
+        raise e

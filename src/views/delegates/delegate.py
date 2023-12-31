@@ -93,7 +93,7 @@ class Delegate(QStyledItemDelegate):
 
     def main_or_quicktask_2(self, painter, option, index):
         # Get type
-        if self.row_type.get(index.row()) == 'main':
+        if self.row_type.get(index.row()) == 'MainTask':
             pass  # default_paint_1 will apply
         elif self.row_type.get(index.row()) == 'QuickTask':
             fill_rect = helper_fn.add_padding(option.rect, self.fill_padding)

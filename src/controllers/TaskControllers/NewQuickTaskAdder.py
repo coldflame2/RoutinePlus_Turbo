@@ -5,9 +5,9 @@ from controllers.TaskControllers import TaskUtilityService
 
 def start_new_quicktask(model, view):
     logging.debug("New QuickTask requested in controller.")
-    selected_row = TaskUtilityService.get_selected_row(view)
+    selected_row = TaskUtilityService.clicked_row_index(view)
 
-    if not TaskUtilityService.is_valid_row(model, selected_row):
+    if not TaskUtilityService.is_rowValid(model, selected_row):
         logging.debug(f"Selected row is invalid. Selected row: {selected_row}")
         return
 
@@ -24,13 +24,13 @@ def start_new_quicktask(model, view):
         logging.debug(f"New quick task data calculated. Data: {new_quick_task_data}")
 
         # Perform the insert operation
-        insert_successful = model.tasker_model.insert_new_task(selected_row + 1, new_quick_task_data)
+        insert_successful = model.model_utility_service.insert_row_with_data(selected_row + 1, new_quick_task_data)
 
         if insert_successful is not True:
             logging.error(f" Inserting QuickTask wasn't successful")
             return
 
-        model.auto_time_updater.update_after_new_quick_task(selected_row, new_quick_task_data)
+        model.auto_timeUpdater.update_after_new_quick_task(selected_row, new_quick_task_data)
 
     except Exception as e:
         logging.error(f"Exception occurred: {type(e)}. Error: {e}")

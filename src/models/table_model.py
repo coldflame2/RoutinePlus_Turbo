@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt, pyqtSignal
 
 from models.auto_time_updater import AutoTimeUpdater
-from models.tasker_model import TaskerModel
+from models.ModelUtilityService import ModelUtilityService
 from src.models.app_data import AppData
 from src.resources.default import VISIBLE_HEADERS, Columns
 
@@ -18,8 +18,8 @@ class TableModel(QAbstractItemModel):
         self.visible_headers = VISIBLE_HEADERS  # Visible headers for UI
         self.column_keys = [column.value for column in Columns]
 
-        self.tasker_model = TaskerModel(self)
-        self.auto_time_updater = AutoTimeUpdater(self)
+        self.model_utility_service = ModelUtilityService(self)
+        self.auto_timeUpdater = AutoTimeUpdater(self)
 
         self.initiate_data()
 
@@ -143,7 +143,7 @@ class TableModel(QAbstractItemModel):
 
     def backup_state(self):
         # Create a deep copy of the current data
-        logging.debug(f"Returning a backup")
+        logging.debug(f" (--Taking a backup)")
         return [row.copy() for row in self._data]
 
     def default_state(self):
@@ -181,7 +181,7 @@ class TableModel(QAbstractItemModel):
 
         try:
             # retrieve the formatted value from TaskerModel's method for view
-            formatted_value = self.tasker_model.format_for_view(index.row(), column_key, row_data)
+            formatted_value = self.model_utility_service.format_for_view(index.row(), column_key, row_data)
             return formatted_value
 
         except Exception as e:
@@ -201,7 +201,7 @@ class TableModel(QAbstractItemModel):
         # validate input and format it for model
         try:
             # get formatted value
-            formatted_value = self.tasker_model.validate_and_format(value, row, column_key)
+            formatted_value = self.model_utility_service.validate_and_format(value, row, column_key)
         except Exception as e:
             # Input is invalid, return False
             logging.error(f"Exception type: {type(e)}. Error:{e}")
@@ -212,9 +212,9 @@ class TableModel(QAbstractItemModel):
             logging.error(f"Formatted value is None.")
             return False
 
-        # retrieve the other data to update from TableSyncManager's method
+        # retrieve the other data to update from AutoTimeUpdater method
         try:
-            other_data_to_update = self.auto_time_updater.get_data_to_update(
+            other_data_to_update = self.auto_timeUpdater.get_data_to_update_after_change(
                 row, column_key, formatted_value)
 
             logging.debug(f"Other data to update: {other_data_to_update}")

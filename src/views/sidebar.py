@@ -97,7 +97,7 @@ class Sidebar(QObject):
         primary_buttons_names = [
             {"display_name": "Save", "action_name": "Save", "tool_tip": "Save current data"},
             {"display_name": "Save As", "action_name": "Save As", "tool_tip": "Save data to a new file"},
-            {"display_name": "+ Task", "action_name": "New Task", "tool_tip": "Add a new task"},
+            {"display_name": "+ Task", "action_name": "New MainTask", "tool_tip": "Add a new task"},
             {"display_name": "+ QuickTask", "action_name": "New QuickTask", "tool_tip": "Add a new QuickTask"},
             {"display_name": "Preferences", "action_name": "Settings", "tool_tip": "Modify app preferences"},
             {"display_name": "Test", "action_name": "Test", "tool_tip": "Test"},

@@ -1,47 +1,45 @@
 import logging
 from datetime import timedelta
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QGuiApplication
+
 from resources.default import Columns
 
 
-def calculate_new_task_data(selected_row, model):
-    logging.debug("Calculating new task data in TaskService.")
-
+def calculate_data_new_maintask(model, linked_maintask, updates_linked_maintask):
     try:
-        # Get the main task index for data
-        main_task_index_for_data = get_main_task_index(model, selected_row)
-
         # Get EndTime and Position of the main task
-        end_time_main_task = model.get_item_from_model(main_task_index_for_data, Columns.EndTime.value)
-        position_main_task = model.get_item_from_model(main_task_index_for_data, Columns.Position.value)
+        endtime_linked_maintask_after_insertion = updates_linked_maintask[1][2]
+        position_linked_maintask = model.get_item_from_model(linked_maintask, Columns.Position.value)
 
         # Calculate end time and reminder for the new task
-        duration = 10
-        end_time_for_new = end_time_main_task + timedelta(minutes=duration)
-        reminder_for_new = end_time_main_task - timedelta(minutes=duration)
+        duration_new_maintask = 1
+        endtime_new_maintask = endtime_linked_maintask_after_insertion + timedelta(minutes=duration_new_maintask)
+        reminder_new_maintask = endtime_linked_maintask_after_insertion - timedelta(minutes=duration_new_maintask)
 
     except Exception as e:
         logging.error(f"Exception type:{type(e)} when calculating data for new task. Error:{e}")
-        return None
+        raise e
 
     # Prepare data for the new QuickTask
-    data_to_insert = {
+    data_new_maintask = {
         Columns.ID.value: None,
-        Columns.StartTime.value: end_time_main_task,
-        Columns.EndTime.value: end_time_for_new,
-        Columns.Duration.value: duration,
+        Columns.StartTime.value: endtime_linked_maintask_after_insertion,
+        Columns.EndTime.value: endtime_new_maintask,
+        Columns.Duration.value: 1,
         Columns.Name.value: f'New Task.',
-        Columns.Reminder.value: reminder_for_new,
-        Columns.Type.value: 'main',
-        Columns.Position.value: position_main_task + 1,
+        Columns.Reminder.value: reminder_new_maintask,
+        Columns.Type.value: 'MainTask',
+        Columns.Position.value: position_linked_maintask + 1,
     }
 
-    return data_to_insert
+    return data_new_maintask
 
 
-def get_main_task_index(model, clicked_row):
+def find_linked_maintask(model, clicked_row):
     """
-    Checks if selected row is 'main' or 'QuickTask.'
+    Checks if selected row is 'MainTask' or 'QuickTask.'
     If it is QuickTask, call the find_main_task_row method.
 
     :param model:
@@ -50,11 +48,13 @@ def get_main_task_index(model, clicked_row):
     """
     if model.get_item_from_model(clicked_row, Columns.Type.value) == 'QuickTask':
         # if selected task is QuickTask, get the first main task from above
-
-        logging.debug(f" --(Clicked row is QuickTask. Calling find_main_task method.)")
-
         try:
-            return find_main_task_above(model, clicked_row)
+            current_row = clicked_row
+            while current_row >= 0:
+                if model.get_item_from_model(current_row, Columns.Type.value) == 'MainTask':
+                    return current_row
+                else:
+                    current_row -= 1
 
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
@@ -62,7 +62,6 @@ def get_main_task_index(model, clicked_row):
 
     else:
         # if clicked row is main task, return it
-        logging.debug(f" --(Clicked row is main task. Returning same for new row data.)")
         return clicked_row
 
 
@@ -74,12 +73,10 @@ def find_main_task_above(model, initial_clicked_row):  # For New Task Data
     :param initial_clicked_row: The row index that the user initially clicked.
     :return: The row index of the main task found, or None if no main task is found.
     """
-    logging.debug("Finding main task above the selected QuickTask.")
-
+    logging.debug(f"Clicked Row is subtask. Finding MainTask above it.")
     current_row = initial_clicked_row
     while current_row >= 0:
-        if model.get_item_from_model(current_row, Columns.Type.value) == 'main':
-            logging.debug(f"Main task found at row index: {current_row}")
+        if model.get_item_from_model(current_row, Columns.Type.value) == 'MainTask':
             return current_row
         else:
             current_row -= 1
@@ -89,10 +86,6 @@ def find_main_task_above(model, initial_clicked_row):  # For New Task Data
 
 
 def calculate_new_quick_task_data(model, selected_row):
-    replace_index = selected_row + 1
-    logging.debug(f"Inserting new QuickTask at index:{replace_index}")
-
-    # For QuickTask name in Columns.Name.value
     selected_sequence = model.get_item_from_model(selected_row, column_key=Columns.Position.value)
 
     quick_task_data_to_insert = {
@@ -109,7 +102,7 @@ def calculate_new_quick_task_data(model, selected_row):
     return quick_task_data_to_insert
 
 
-def is_row_deletable(model, selected_row):
+def is_rowDeletable(model, selected_row):
     if selected_row is None:
         logging.debug(" --(No row selected.)")
         return False
@@ -123,9 +116,7 @@ def is_row_deletable(model, selected_row):
     return True
 
 
-def is_valid_row(model, clicked_row):
-    print(f"This one 4")
-
+def is_rowValid(model, clicked_row):
     if clicked_row is None:
         logging.debug(" -- No row selected.")
         return False
@@ -139,22 +130,32 @@ def is_valid_row(model, clicked_row):
     return True
 
 
-def is_valid_task_row(model, clicked_row):
+def get_clicked_row(model, view):
+    clicked_row = clicked_row_index(view)
 
-    if is_valid_row(model, clicked_row) is False:
-        return False
+    if is_rowValid(model, clicked_row) is False:
+        return None
 
-    clicked_row_type = model.get_item_from_model(clicked_row, Columns.Type.value)
-    row_below_type = model.get_item_from_model(clicked_row + 1, Columns.Type.value)
+    try:
+        clicked_row_type = model.get_item_from_model(clicked_row, Columns.Type.value)
+        row_below_type = model.get_item_from_model(clicked_row + 1, Columns.Type.value)
+
+    except Exception as e:
+        logging.error(f"Error while getting row types. Exception type: {type(e)}. Error:{e}")
+        return None
 
     if clicked_row_type == 'QuickTask' and row_below_type == 'QuickTask':
         logging.debug(" -- Cannot add new row between QuickTasks.")
-        return False
+        return None
 
-    return True, clicked_row
+    if model.get_item_from_model(clicked_row, Columns.Duration.value) == 1:
+        logging.debug(f"Existing Task is already of one minute.")
+        return None
+
+    return clicked_row
 
 
-def get_selected_row(table_view):
+def clicked_row_index(table_view):
     selection_model = table_view.selectionModel()
     selected_row_indices = selection_model.selectedIndexes()
 

@@ -8,11 +8,11 @@ from resources.default import Columns
 from utils import helper_fn
 
 
-class TaskerModel:
+class ModelUtilityService:
     def __init__(self, model):
         self.model = model
 
-    def insert_new_task(self, row, data_to_insert):
+    def insert_row_with_data(self, row, data_to_insert):
         if row < 0 or row >= self.model.rowCount():
             logging.error(f"IndexError: Row index {row} is out of range")
             return False
@@ -149,9 +149,10 @@ class TaskerModel:
             raise ValueError(f"Task name value is empty: '{value}'")
 
         # Get task name value and update/append row info to it
-        return self.update_row_info(value, row)
+        # return self.get_row_metadata(value, row)
+        return value
 
-    def update_row_info(self, value, row):
+    def get_row_metadata(self, value, row):
         logging.debug(f"Updating row info for row: '{row}'")
         task_id = self.model.get_item_from_model(row, Columns.ID.value)
         task_type = self.model.get_item_from_model(row, Columns.Type.value)

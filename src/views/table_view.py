@@ -136,3 +136,4 @@ class TableView(QTableView):
         else:
             super().mousePressEvent(event)
             self.update_selection_index.emit(index)
+
