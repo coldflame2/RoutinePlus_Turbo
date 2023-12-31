@@ -12,7 +12,8 @@ class ModelUtilityService:
     def __init__(self, model):
         self.model = model
 
-    def insert_row_with_data(self, row, data_to_insert):
+    def insert_row_in_model(self, row, data_to_insert):
+
         if row < 0 or row >= self.model.rowCount():
             logging.error(f"IndexError: Row index {row} is out of range")
             return False
@@ -22,7 +23,7 @@ class ModelUtilityService:
             return False
 
         try:
-            logging.debug(f"Beginning to insert new row at index: '{row}'")
+            logging.debug(f"Inserting new row at index '{row}' with the provided data.")
             self.model.beginInsertRows(QModelIndex(), row, row)
             self.model.set_row_data(row, data_to_insert)
             self.model.endInsertRows()
@@ -32,14 +33,14 @@ class ModelUtilityService:
             return False
 
         try:
-            self.insert_row_to_sqlite(row, data_to_insert)
+            self.insert_row_in_sqlite(row, data_to_insert)
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
             return False
 
         return True
 
-    def insert_row_to_sqlite(self, row, data_to_insert):
+    def insert_row_in_sqlite(self, row, data_to_insert):
         row_id = self.model.app_data.insert_new_row(data_to_insert)
         self.model.set_item_in_model(row, 'id', row_id)
 

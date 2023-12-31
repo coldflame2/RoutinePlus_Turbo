@@ -24,7 +24,7 @@ def start_new_quicktask(model, view):
         logging.debug(f"New quick task data calculated. Data: {new_quick_task_data}")
 
         # Perform the insert operation
-        insert_successful = model.model_utility_service.insert_row_with_data(selected_row + 1, new_quick_task_data)
+        insert_successful = model.model_utility_service.insert_row_in_model(selected_row + 1, new_quick_task_data)
 
         if insert_successful is not True:
             logging.error(f" Inserting QuickTask wasn't successful")

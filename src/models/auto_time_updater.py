@@ -16,37 +16,38 @@ class AutoTimeUpdater:
         self._recently_updated_rows = set()
 
     # Auto-updates after edits from UI based inputs
-    def get_data_to_update_after_change(self, row, changed_column, new_value):
+    def get_data_to_update_after_change(self, edited_row, changed_column, new_value):
         """
         Updates the values of the table model after a change in the UI.
 
-        :param row: Row index to update.
+        :param edited_row: Row index to update.
         :param changed_column: Column that was changed.
         :param new_value: New value for the changed column.
         """
-        logging.debug(f"AutoDataUpdater: Updating values after changes in '{changed_column}' of row {row}...")
+
+        logging.debug(f"Updating values after changes in '{changed_column}' of row {edited_row}...")
 
         if changed_column == Columns.Duration.value:
             logging.debug(f" --AutoDataUpdater: Getting other values to update after duration change...")
-            return self._data_after_duration_change(row, new_value)
+            return self._data_after_duration_change(edited_row, new_value)
 
         elif changed_column == Columns.EndTime.value:
             logging.debug(f" --AutoDataUpdater: Getting other values to update after end time change...")
-            return self._data_after_endtime_change(row, new_value)
+            return self._data_after_endtime_change(edited_row, new_value)
 
         elif changed_column == Columns.StartTime.value:
             logging.debug(f" --AutoDataUpdater: Getting other values to update after start time change...")
-            return self._data_after_startime_change(row, new_value)
+            return self._data_after_startime_change(edited_row, new_value)
 
         else:
             logging.info(f"No updates required for changes in column '{changed_column}'.")
             return None
 
-    def _data_after_duration_change(self, row, input_duration):
+    def _data_after_duration_change(self, edited_row, input_duration):
         """
         Prepares the changes needed for a duration update.
 
-        :param row: Row index where the duration changed.
+        :param edited_row: Row index where the duration changed.
         :param input_duration: The new duration value for the row.
         :return: A list of changes to be applied.
         """
@@ -63,21 +64,21 @@ class AutoTimeUpdater:
         try:
             logging.debug(f"Preparing the changes after duration changed. ")
 
-            if row == self.model.rowCount() - 1:
+            if edited_row == self.model.rowCount() - 1:
                 logging.debug(f"The changed row is the last one. Propagating changes to row above.")
 
-                start_time = self.model.get_item_from_model(row, Columns.StartTime.value)
+                start_time = self.model.get_item_from_model(edited_row, Columns.StartTime.value)
                 new_start_time = helper_fn.calculate_start_time(start_time, input_duration)
-                changes.append((row, Columns.StartTime.value, new_start_time))
+                changes.append((edited_row, Columns.StartTime.value, new_start_time))
 
                 logging.debug(f"New start time of the last row prepared: {new_start_time}")
 
                 # for row above
-                changes.append((row - 1, Columns.EndTime.value, new_start_time))
+                changes.append((edited_row - 1, Columns.EndTime.value, new_start_time))
                 logging.debug(f"New End time of row above prepared (same as end time of this row: {new_start_time}.")
 
                 duration_row_above = helper_fn.calculate_duration(start_time, new_start_time)
-                changes.append((row - 1, Columns.Duration.value, duration_row_above))
+                changes.append((edited_row - 1, Columns.Duration.value, duration_row_above))
                 logging.debug(f"New Duration for row above prepared: {duration_row_above}")
 
                 return changes
@@ -86,21 +87,22 @@ class AutoTimeUpdater:
                 logging.debug(f"The changed row is not the last one. Propagating changes to row below.")
 
                 # Get the start time of the current row
-                start_time = self.model.get_item_from_model(row, Columns.StartTime.value)
+                start_time = self.model.get_item_from_model(edited_row, Columns.StartTime.value)
                 # Calculate new end time for the current row
                 new_end_time = helper_fn.calculate_end_time(start_time, input_duration)
-                changes.append((row, Columns.EndTime.value, new_end_time))
+                changes.append((edited_row, Columns.EndTime.value, new_end_time))
                 logging.debug(f"New End time for same row prepared. (new end time: {new_end_time})")
 
                 # Prepare changes for the next row
-                next_row_end_time = self.model.get_item_from_model(row + 1, Columns.EndTime.value)
+                next_row_end_time = self.model.get_item_from_model(edited_row + 1, Columns.EndTime.value)
                 next_row_duration = helper_fn.calculate_duration(new_end_time, next_row_end_time)
 
-                changes.append((row + 1, Columns.StartTime.value, new_end_time))
-                changes.append((row + 1, Columns.Duration.value, next_row_duration))
+                changes.append((edited_row + 1, Columns.StartTime.value, new_end_time))
+                changes.append((edited_row + 1, Columns.Duration.value, next_row_duration))
 
                 logging.debug(f"Start time and duration for next row prepared. (new start time: {new_end_time}, "
                               f"new duration: {next_row_duration})")
+
                 return changes
 
         except Exception as e:
@@ -223,30 +225,30 @@ class AutoTimeUpdater:
     # Auto-updates after new tasks or deletions
 
     # In case of new MainTask
-    def calculate_updates_linked_maintask(self, selected_row):
-        Change = namedtuple('Change', ['row', 'column', 'new_value'])
+    def calculate_updates_linked_maintask(self, linked_maintask):
+        logging.debug(f"Calculating updates for linked maintask")
 
         try:
-            changes = []
-            existing_duration = self.model.get_item_from_model(selected_row, Columns.Duration.value)
-            print(f"Existing Duration: {existing_duration}")
-            new_duration = existing_duration - 1
-            changes.append(Change(row=selected_row, column=Columns.Duration.value, new_value=new_duration))
+            updates = []
+            duration_original = self.model.get_item_from_model(linked_maintask, Columns.Duration.value)
+            duration_updated = duration_original - 1
+            updates.append((linked_maintask, Columns.Duration.value, duration_updated))
 
-            existing_end_time = self.model.get_item_from_model(selected_row, Columns.EndTime.value)
-            print(f"Existing End time: {existing_end_time}")
-            new_end_time = existing_end_time - timedelta(minutes=1)
-            print(f"New end time:{new_end_time}")
-            changes.append(Change(row=selected_row, column=Columns.EndTime.value, new_value=new_end_time))
+            endtime_original = self.model.get_item_from_model(linked_maintask, Columns.EndTime.value)
+            endtime_updated = endtime_original - timedelta(minutes=1)
+            updates.append((linked_maintask, Columns.EndTime.value, endtime_updated))
 
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
             raise e
 
-        print(f"Changes of linked_mainTaskRow:{changes}")
-        return changes
+        for update in updates:
+            logging.debug(f"Prepared update for linked MainTask:{update}")
+
+        return updates
 
     def update_linked_maintask(self, data):
+        logging.debug(f"Updating linked MainTask with the provided data.")
         for row, col, val in data:
             self.model.set_item_in_model(row, col, val)
 
@@ -263,8 +265,7 @@ class AutoTimeUpdater:
         :param data_tobe_new_row:
         :return:
         """
-        changes = []
-        logging.debug(f"Preparing start time and duration for to-be-below new row after insertion.")
+        logging.debug(f"Calculating updates for to-be shifted MainTask")
 
         index_to_update = self._find_maintask_below(clicked_row)
 
@@ -272,39 +273,33 @@ class AutoTimeUpdater:
             raise Exception("No MainTask found below selected row. Not even last row.")
 
         try:
+            updates = []
             start_time = data_tobe_new_row[Columns.EndTime.value]  # Same as end time to be added new row
-            changes.append((index_to_update, Columns.StartTime.value, start_time))
+            updates.append((index_to_update, Columns.StartTime.value, start_time))
 
             end_time = self.model.get_item_from_model(index_to_update - 1, Columns.EndTime.value)
-            print(clicked_row + 1)
-            print(end_time)
             duration_row_below_new = helper_fn.calculate_duration(start_time, end_time)
-
-            changes.append((index_to_update, Columns.Duration.value, duration_row_below_new))
+            updates.append((index_to_update, Columns.Duration.value, duration_row_below_new))
 
         except Exception as e:
             logging.error(f"Error when preparing updated data for to-be-shifted row. Type: {type(e)}. Error"
                           f":{e}")
             raise e
 
-        logging.debug(f"Changes prepared for to-be-shifted row: {changes}")
-        return changes
+        for update in updates:
+            logging.debug(f"Prepared update for to-be shifted MainTask:{update}")
+
+        return updates
 
     def update_shifted_maintask(self, data_below_new):
         # Update only Start time and Duration of row below the newly added row
         try:
-            logging.debug("Updating StartTime and Duration of row below the new task row.")
+            logging.debug("Updating the shifted MainTask with the provided data.")
 
             if data_below_new:
                 # Update the row below with the new data
                 for row, col, val in data_below_new:
                     self.model.set_item_in_model(row, col, val)
-
-                # Update positions of all the rows below the new row
-                row_below_new_row = data_below_new[0][0]
-                self.update_positions(row_below_new_row, 'add')
-
-            logging.debug("Data Updated after adding new task.")
 
         except Exception as e:
             logging.error(f"Exception type: {type(e)} while trying to update after new task. Error: {e}")
@@ -444,10 +439,13 @@ class AutoTimeUpdater:
         # Determine the operation type: addition or deletion
         position_change = 1 if operation == 'add' else -1
 
+        position_row_above = self.model.get_item_from_model(first_row_to_update - 1, Columns.Position.value)
+        current_position = position_row_above + position_change if operation == 'add' else position_row_above
+
         for row in range(first_row_to_update, self.model.rowCount()):
             col_key = Columns.Position.value
-            old_position = self.model.get_item_from_model(row, col_key)
-            new_position = old_position + position_change
+            new_position = current_position
+            current_position += position_change  # Increment or decrement for the next row
 
             try:
                 update_successful = self.model.set_item_in_model(row, col_key, new_position)

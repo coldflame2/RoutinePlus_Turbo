@@ -7,11 +7,10 @@ from PyQt6.QtGui import QGuiApplication
 from resources.default import Columns
 
 
-def calculate_data_new_maintask(model, linked_maintask, updates_linked_maintask):
+def calculate_data_new_maintask(updates_linked_maintask):
+    logging.debug(f"Calculating data for to-be new MainTask.")
     try:
-        # Get EndTime and Position of the main task
         endtime_linked_maintask_after_insertion = updates_linked_maintask[1][2]
-        position_linked_maintask = model.get_item_from_model(linked_maintask, Columns.Position.value)
 
         # Calculate end time and reminder for the new task
         duration_new_maintask = 1
@@ -24,16 +23,17 @@ def calculate_data_new_maintask(model, linked_maintask, updates_linked_maintask)
 
     # Prepare data for the new QuickTask
     data_new_maintask = {
-        Columns.ID.value: None,
+        Columns.ID.value: None,  # ID is inserted automatically when data is inserted in SQLite database
         Columns.StartTime.value: endtime_linked_maintask_after_insertion,
         Columns.EndTime.value: endtime_new_maintask,
-        Columns.Duration.value: 1,
+        Columns.Duration.value: duration_new_maintask,
         Columns.Name.value: f'New Task.',
         Columns.Reminder.value: reminder_new_maintask,
         Columns.Type.value: 'MainTask',
-        Columns.Position.value: position_linked_maintask + 1,
+        Columns.Position.value: None,  # Position is updated after (in NewMainTaskAdder)
     }
 
+    logging.debug(f"Data for new MainTask to be added:{data_new_maintask}")
     return data_new_maintask
 
 
