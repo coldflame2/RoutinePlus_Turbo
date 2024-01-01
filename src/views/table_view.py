@@ -1,14 +1,13 @@
 import logging
 
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, Qt, pyqtProperty, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QPainter, QColor
 from PyQt6.QtWidgets import (
     QAbstractItemView, QTableView)
 
 from resources.default import Columns
-from resources.styles import table_qss
 from views.delegates.delegate import Delegate
-from views.header_view import HeaderView
+from views.header_view import HeaderView, VHeaderView
 
 
 class TableView(QTableView):
@@ -16,26 +15,56 @@ class TableView(QTableView):
     update_selection_index = pyqtSignal(object)
 
     def __init__(self, *args, **kwargs):
-        logging.debug(f"TableView class constructor starting.")
-
         """
-        Most of the instance attributes that are generally initialized in the constructor have been 
+        Most of the instance attributes that are generally initialized in the constructor have been
         initialized in the setModel method. This is because the model is not available at the time of
         initialization of the TableView class.
         """
         super().__init__(*args, **kwargs)
-        self.update()
-        self.repaint()
+        logging.debug(f"TableView class constructor starting.")
+        self.animation = None
+
+    def _get_animated_row_height(self):
+        return self._animated_row_height
+
+    def _set_animated_row_height(self, height):
+        self._animated_row_height = height
+        if self.animating_row_index >= 0:
+            self.set_row_height()
+
+    animated_row_height = pyqtProperty(int, _get_animated_row_height, _set_animated_row_height)
+
+    def start_row_animation(self, new_row_index):
+        # Set the row index for the row that we want to animate
+        self.animating_row_index = new_row_index
+
+        # Create the animation object
+        self.animation = QPropertyAnimation(self, b'animated_row_height')
+        self.animation.setDuration(5000)
+        self.animation.setStartValue(10)
+        self.animation.setEndValue(40)
+        self.animation.setEasingCurve(QEasingCurve.Type.Linear)
+
+        self.animation.finished.connect(self.on_animation_finished)
+
+        self.animation.start()
+
+    def on_animation_finished(self):
+        self.viewport().update()
 
     def setModel(self, model):
         super().setModel(model)
+
+        self._animated_row_height = 1
+        self.animating_row_index = -1  # Initialize with an invalid index
+        self.set_row_height()
+
         self.set_styles()
         self.set_headers(model)
         self.set_delegate()
         self.connect_signals()
         self.set_span_for_quicktasks()
         self.set_view_properties()
-        self.set_height()
         self.set_columns_widths()
         self.set_styles()
 
@@ -44,8 +73,8 @@ class TableView(QTableView):
         self.setHorizontalHeader(self.header_view)
         # self.header_view = self.horizontalHeader()
 
-        # self.v_header_view = VHeaderView(model, Qt.Orientation.Vertical, self)
-        # self.setVerticalHeader(self.v_header_view)
+        self.v_header_view = VHeaderView(model, Qt.Orientation.Vertical, self)
+        self.setVerticalHeader(self.v_header_view)
 
     def set_delegate(self):
         self.table_delegate = Delegate(self)
@@ -54,9 +83,10 @@ class TableView(QTableView):
     def connect_signals(self):
         # Rest of them are to connect signals from model
         model = self.model()
-        model.dataChanged.connect(self.set_height)
+        model.start_row_animation_signal.connect(self.start_row_animation)
+        model.dataChanged.connect(self.set_row_height)
         model.rowsInserted.connect(self.set_span_for_quicktasks)
-        model.rowsInserted.connect(self.set_height)
+        # model.rowsInserted.connect(self.start_row_animation)
 
     def set_view_properties(self):
 
@@ -82,15 +112,16 @@ class TableView(QTableView):
                 # Last argument is number of columns to span (not the index to span till)
                 self.setSpan(row, end_col_index, 1, 3)
 
-    def set_height(self):
-        self.verticalHeader().setDefaultSectionSize(45)
-
+    def set_row_height(self):
         for row in range(self.model().rowCount()):
+
             task_type = self.model().get_item_from_model(row, Columns.Type.value)
             if task_type == 'QuickTask':
                 self.setRowHeight(row, 28)
+            elif row == self.animating_row_index:
+                self.setRowHeight(row, self._animated_row_height)
             else:
-                self.setRowHeight(row, 45)
+                self.setRowHeight(row, 40)
 
     def set_styles(self):
         pass
@@ -137,3 +168,5 @@ class TableView(QTableView):
             super().mousePressEvent(event)
             self.update_selection_index.emit(index)
 
+    def showEvent(self, a0):
+        self.set_row_height()

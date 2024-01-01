@@ -1,6 +1,6 @@
 import logging
 
-from PyQt6.QtCore import QModelIndex, Qt
+from PyQt6.QtCore import QModelIndex, Qt, QSize
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PyQt6.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate, QStyle, QLineEdit
 
@@ -12,6 +12,7 @@ class Delegate(QStyledItemDelegate):
     def __init__(self, view, parent=None):
         super().__init__(parent)
         self.view = view
+        self.font = QFont("Roboto", 10)
 
         self.define_padding_and_color()
 
@@ -76,11 +77,10 @@ class Delegate(QStyledItemDelegate):
         self.paint_text_4(painter, option, text_data)
 
     def set_painter_basics(self, painter):
-        font = QFont("Roboto", 10)
-        font.setWeight(QFont.Weight.Light)
-        painter.setFont(font)
+        self.font.setWeight(QFont.Weight.Light)
+        painter.setFont(self.font)
 
-        pen = QPen(QColor('black'), 1)
+        pen = QPen(QColor('black'), 2)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)  # Smooth end caps for lines
         painter.setPen(pen)
 
@@ -147,6 +147,9 @@ class Delegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         editor = QLineEdit(parent)
         font = editor.font()
-        font.setPointSize(12)
+        font.setPointSize(1)
         editor.setFont(font)
         return editor
+
+    def sizeHint(self, option, index):
+        return QSize(1, 1)  # very small height and width

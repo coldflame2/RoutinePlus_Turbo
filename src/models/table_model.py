@@ -11,6 +11,7 @@ from src.resources.default import VISIBLE_HEADERS, Columns
 
 class TableModel(QAbstractItemModel):
     test_signal_from_model = pyqtSignal(str)
+    start_row_animation_signal = pyqtSignal(int)
 
     def __init__(self):
         super().__init__()
@@ -22,6 +23,10 @@ class TableModel(QAbstractItemModel):
         self.auto_timeUpdater = AutoTimeUpdater(self)
 
         self.initiate_data()
+
+    def animation_after_row_insertion(self, row):
+        logging.debug(f"Emitting signal for row animation from TableModel.")
+        self.start_row_animation_signal.emit(row)
 
     def initiate_data(self):
         self.app_data = AppData()
@@ -258,7 +263,7 @@ class TableModel(QAbstractItemModel):
 
             elif orientation == Qt.Orientation.Vertical:
                 # Return the row number for the given section (row index)
-                return f"I:{section}"
+                return f"{section}"
         return None
 
     def flags(self, index):
@@ -286,3 +291,4 @@ class TableModel(QAbstractItemModel):
 
     def columnCount(self, parent=QModelIndex()):
         return len(self.column_keys) if not parent.isValid() else 0
+

@@ -38,6 +38,12 @@ class ModelUtilityService:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
             return False
 
+        try:
+            logging.debug(f"Emitting signal for row animation from ModelUtilityService.")
+            self.model.animation_after_row_insertion(row)
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+
         return True
 
     def insert_row_in_sqlite(self, row, data_to_insert):
