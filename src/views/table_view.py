@@ -138,16 +138,11 @@ class TableView(QTableView):
         super().mouseMoveEvent(event)
 
     def mousePressEvent(self, event):
-        # IMPORTANT! Call the base class implementation to handle default behavior
         super().mousePressEvent(event)
 
-        # Get the index of the item that was clicked
         index = self.indexAt(event.pos())
 
-        # Check if the click was on a valid index (row)
         if not index.isValid():
-            # If the click was on an empty area, clear the selection
-            # apparently, this makes index.row() to be -1
             self.clearSelection()
             self.update_selection_index.emit(index)
         else:

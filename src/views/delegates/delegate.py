@@ -34,7 +34,7 @@ class Delegate(QStyledItemDelegate):
         logging.debug(f"Delegate Constructor initialized.")
 
     def define_padding_and_color(self):
-        self.fill_padding = (0, 0, 3, 1)  # Left, Top, Right, Bottom
+        self.fill_padding = (0, 0, 0, 1)  # Left, Top, Right, Bottom
         self.text_padding = (8, 1, 1, 1)
 
         self.fill = "#FFFFFF"
@@ -86,15 +86,15 @@ class Delegate(QStyledItemDelegate):
         self.paint_text_4(painter, option, text_data)
 
     def set_painter_basics(self, painter):
-        font_family = "Calibri Light"
+        font_family = "Microsoft YaHei UI Light"
         font_db = QFontDatabase
 
         if font_family in font_db.families():
-            self.font = QFont(font_family, 11)
+            self.font = QFont(font_family, 10)
         else:
             self.font = QFont('Arial', 10)
 
-        self.font.setWeight(QFont.Weight.Normal)
+        self.font.setWeight(QFont.Weight.Thin)
         painter.setFont(self.font)
 
         pen_color = QColor(0, 0, 0, self.txt_opacity)
