@@ -30,6 +30,12 @@ def start_new_quicktask(model, view):
             logging.error(f" Inserting QuickTask wasn't successful")
             return
 
+        insert_in_db = model.model_utility_service.insert_row_in_sqlite(selected_row + 1, new_quick_task_data)
+
+        if insert_in_db is not True:
+            logging.error(f"Failed inserting QuickTask is SQLite Database.")
+            return
+
         model.auto_timeUpdater.update_after_new_quick_task(selected_row, new_quick_task_data)
 
     except Exception as e:

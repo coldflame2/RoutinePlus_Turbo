@@ -42,7 +42,17 @@ class Controller:
 
     def save_all(self):
         logging.debug(f"Save data requested in controller.")
-        self.model.save_to_database_file()
+        try:
+            self.model.save_to_database_file()
+        except Exception as e:
+            logging.error(f"Exception when saving to database. Type: {type(e)}. Error:{e}")
+
+        try:
+            self.model.app_data.commit_sqlite_all()
+        except Exception as e:
+            logging.error(f"Exception when committing to database. Type: {type(e)}. Error:{e}")
+
+        self.table_view.reset_recent_row_ids_dict()
 
     def save_as(self):
         logging.debug(f"'Save As' requested in controller. Not implemented yet")

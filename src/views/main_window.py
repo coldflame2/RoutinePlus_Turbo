@@ -10,11 +10,11 @@ from PyQt6.QtWidgets import QHBoxLayout, QMainWindow, QSplitter, QSplitterHandle
 # This app's utilities and resources
 from src.resources.styles import all_styles
 from src.utils import helper_fn
-
+from src.views.ribbon import RibbonWidget
+from src.views.sidebar import Sidebar
 # This app's Modules
 from src.views.title_bar import TitleBar
-from src.views.sidebar import Sidebar
-from src.views.ribbon import RibbonWidget
+from views.animations.main_window_animation import MainWindowAnimation
 
 
 class MainWindow(QMainWindow):
@@ -25,9 +25,10 @@ class MainWindow(QMainWindow):
         super().__init__()
         logging.debug(f"MainFrame class constructor starting.")
 
-        self.closing_source = None  # This is instance variable so that it can be used in MainApp class (main.py)
-        self.table_view = table_view
-        self.controller = controller
+        self.table_view = table_view  # Passed from main()
+        self.controller = controller  # Passed from main()
+
+        self.win_opacity = 1
 
         self.get_geometry_and_state()  # Settings, geometry, window state
         self._instantiate_components()  # ribbon, left bar, splitter, title bar
@@ -37,14 +38,18 @@ class MainWindow(QMainWindow):
         self.connect_signals()
         self._setup_win_properties()
 
+        self.closing_source = None  # This is instance variable so that it can be used in MainApp class (main.py)
+
         logging.debug(f"MainFrame constructor successfully initialized.")
 
     def get_geometry_and_state(self):
         self.env_config_class = helper_fn.get_environment_cls(False, caller='MainWin')
         self.settings_values = self.env_config_class.SETTINGS_VALUES
 
-        self.geometry = self.settings_values.value("geometry")
-        self.state = self.settings_values.value("windowState")
+        self.saved_geometry = self.settings_values.value("saved_geometry")
+        self.saved_state = self.settings_values.value("saved_state")
+        self.saved_size = self.settings_values.value("saved_size")
+
 
     def _instantiate_components(self):
         try:
@@ -121,7 +126,9 @@ class MainWindow(QMainWindow):
     def _setup_win_properties(self):
         self.restore_state()
         self.restore_geometry()
+        self.restore_size()
         self.setStyleSheet(all_styles.MAIN_WINDOW_STYLE)
+
         self.setWindowTitle(self.env_config_class.APP_NAME)  # Keep this, even though visible win title is custom.
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, False)
 
@@ -129,23 +136,19 @@ class MainWindow(QMainWindow):
         self.icon_path = helper_fn.resource_path(title_bar_icon_relative_path)
         self.setWindowIcon(QIcon(self.icon_path))
 
-    def set_win_state_and_geometry(self):
-        logging.debug(f" Retrieving MainWin geometry and state and saving them to QSettings.")
-
+    def save_current_state_geometry_to_settings(self):
         win_geometry = self.saveGeometry()
         win_state = self.saveState()
+        win_size = self.size()
         try:
-            logging.debug(f" Saving Window geometry and stated to settings.")
-
-            self.settings_values.setValue("geometry", win_geometry)
-            self.settings_values.setValue("windowState", win_state)
-
+            self.settings_values.setValue("saved_geometry", win_geometry)
+            self.settings_values.setValue("saved_state", win_state)
+            self.settings_values.setValue("saved_size", win_size)
         except Exception as e:
             # Handle the exception or re-raise with a custom exception
             logging.error(f"Error saving window state and geometry: {str(e)}. Removing values from the settings.")
-
-            self.settings_values.remove("geometry")
-            self.settings_values.remove("windowState")
+            self.settings_values.remove("saved_geometry")
+            self.settings_values.remove("saved_state")
 
     def toggle_maximize_restore(self):
         if self.windowState() == Qt.WindowState.WindowNoState:  # If window not maximized
@@ -158,7 +161,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         try:
-            self.set_win_state_and_geometry()
+            self.save_current_state_geometry_to_settings()
             print(f"closeEvent of MainFrame called from source: {self.closing_source}")
             logging.debug(f" Closing main window. closeEvent of MainWin called from source: {self.closing_source}")
             event.accept()  # This will accept the close action
@@ -168,17 +171,26 @@ class MainWindow(QMainWindow):
 
     def restore_geometry(self):
         try:
-            self.restoreGeometry(self.geometry)
+            self.restoreGeometry(self.saved_geometry)
         except TypeError:
             logging.debug(f" TypeError when restoring geometry. Setting default geometry.")
-            self.setGeometry(340, 220, 650, 500)
+            # self.setGeometry(340, 220, 650, 500)
         except Exception as e:
             print(f" Exception '{e}' while restoring state.")
             logging.error(f" Exception '{e}' while restoring state.")
 
+    def restore_size(self):
+        try:
+            self.resize(self.saved_size)
+        except TypeError:
+            logging.debug(f" TypeError when restoring size.")
+        except Exception as e:
+            print(f" Exception '{e}' while restoring size.")
+            logging.error(f" Exception '{e}' while restoring size.")
+
     def restore_state(self):
         try:
-            self.restoreState(self.state)
+            self.restoreState(self.saved_state)
         except TypeError:
             logging.error(f" TypeError when restoring state.")
         except Exception as e:
@@ -186,13 +198,16 @@ class MainWindow(QMainWindow):
             logging.error(f" Exception '{e}' while restoring state.")
 
     def resizeEvent(self, a0):
-        self.set_win_state_and_geometry()
-        logging.debug(f" MainWin resized. Saving geometry and state.")
+        self.save_current_state_geometry_to_settings()
 
     def changeEvent(self, event):
         super().changeEvent(event)
         if event.type() == QEvent.Type.WindowStateChange:
             self.window_state_changed.emit()
+
+    def showEvent(self, a0):
+        self.main_window_animation = MainWindowAnimation(self, self.table_view)
+        self.main_window_animation.start()
 
 
 class HoverSplitter(QSplitter):

@@ -50,6 +50,26 @@ class TableModel(QAbstractItemModel):
             logging.error(f"IndexError: Row index {row} is out of range")
             return None
 
+    def get_index_by_id_value(self, id_value):
+        """
+        Search for the index of the row that has the specified id_value in the id_column.
+
+        :param self: The TableModel instance to search.
+        :param id_value: The ID value to search for.
+        :return: QModelIndex of the found row, or an invalid QModelIndex if not found.
+        """
+        id_column_index = self.column_index(Columns.ID.value)
+        if id_column_index is None:
+            logging.error(f"Invalid column.")
+            return QModelIndex()  # Invalid column key
+
+        for row in range(self.rowCount()):
+            index = self.index(row, id_column_index)
+            if self.data(index) == id_value:
+                return index
+
+        return QModelIndex()  # Return an invalid index if not found
+
     def set_item_in_model(self, row, column_key, value):
         """
         Updates the value for a specified row and column.
@@ -133,7 +153,7 @@ class TableModel(QAbstractItemModel):
 
                 self.app_data.update_sqlite_data(row_data)
 
-            self.app_data.commit_sqlite_all()
+
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
 
@@ -178,7 +198,8 @@ class TableModel(QAbstractItemModel):
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
 
-        if not index.isValid() or role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+        if not index.isValid() or role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole,
+                                               Qt.ItemDataRole.UserRole):
             return None
 
         row_data = self._data[index.row()]
@@ -292,3 +313,8 @@ class TableModel(QAbstractItemModel):
     def columnCount(self, parent=QModelIndex()):
         return len(self.column_keys) if not parent.isValid() else 0
 
+    def column_index(self, column_name):
+        try:
+            return self.column_keys.index(column_name)
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")

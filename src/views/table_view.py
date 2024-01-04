@@ -1,11 +1,13 @@
 import logging
 
-from PyQt6.QtCore import pyqtSignal, Qt, pyqtProperty, QPropertyAnimation, QEasingCurve
+from PyQt6.QtCore import pyqtSignal, Qt, pyqtProperty, QPropertyAnimation, QEasingCurve, QAbstractAnimation, QTimer
 from PyQt6.QtGui import QPainter, QColor
 from PyQt6.QtWidgets import (
     QAbstractItemView, QTableView)
 
 from resources.default import Columns
+from resources.styles import table_qss
+from views.animations.new_row_animation import NewRowAnimation
 from views.delegates.delegate import Delegate
 from views.header_view import HeaderView, VHeaderView
 
@@ -21,45 +23,41 @@ class TableView(QTableView):
         initialization of the TableView class.
         """
         super().__init__(*args, **kwargs)
+        self.recent_rows_ids = {}
+        self.new_added_row = -1
         logging.debug(f"TableView class constructor starting.")
-        self.animation = None
+        self.new_row_animation = None
 
-    def _get_animated_row_height(self):
-        return self._animated_row_height
+    def new_rows_visuals(self, new_row):
+        self.new_row_animation = NewRowAnimation(self, new_row)
+        self.updated_new_row_id_dict(new_row)
 
-    def _set_animated_row_height(self, height):
-        self._animated_row_height = height
-        if self.animating_row_index >= 0:
-            self.set_row_height()
+        self.new_row_animation.start()
 
-    animated_row_height = pyqtProperty(int, _get_animated_row_height, _set_animated_row_height)
+    def updated_new_row_id_dict(self, new_row):
+        self.new_added_row = new_row
+        all_recent_rows_ids = self.recent_rows_ids.values()
+        existing_id = self.recent_rows_ids.get(new_row)
 
-    def start_row_animation(self, new_row_index):
-        # Set the row index for the row that we want to animate
-        self.animating_row_index = new_row_index
+        if existing_id in all_recent_rows_ids:
+            updated_index = self.model().get_index_by_id_value(existing_id)
+            updated_row = updated_index.row()
+            self.recent_rows_ids[updated_row] = existing_id
+        else:
+            self.recent_rows_ids[new_row] = self.model().get_item_from_model(new_row, Columns.ID.value)
 
-        # Create the animation object
-        self.animation = QPropertyAnimation(self, b'animated_row_height')
-        self.animation.setDuration(5000)
-        self.animation.setStartValue(10)
-        self.animation.setEndValue(40)
-        self.animation.setEasingCurve(QEasingCurve.Type.Linear)
+    def reset_new_added_row(self):
+        # Calledd from new_row_animation
+        self.new_added_row = -1
 
-        self.animation.finished.connect(self.on_animation_finished)
-
-        self.animation.start()
-
-    def on_animation_finished(self):
-        self.viewport().update()
+    def reset_recent_row_ids_dict(self):
+        # Called from Controller after saving
+        self.recent_rows_ids = {}
 
     def setModel(self, model):
         super().setModel(model)
 
-        self._animated_row_height = 1
-        self.animating_row_index = -1  # Initialize with an invalid index
         self.set_row_height()
-
-        self.set_styles()
         self.set_headers(model)
         self.set_delegate()
         self.connect_signals()
@@ -71,7 +69,6 @@ class TableView(QTableView):
     def set_headers(self, model):
         self.header_view = HeaderView(model, Qt.Orientation.Horizontal, self)
         self.setHorizontalHeader(self.header_view)
-        # self.header_view = self.horizontalHeader()
 
         self.v_header_view = VHeaderView(model, Qt.Orientation.Vertical, self)
         self.setVerticalHeader(self.v_header_view)
@@ -81,15 +78,11 @@ class TableView(QTableView):
         self.setItemDelegate(self.table_delegate)
 
     def connect_signals(self):
-        # Rest of them are to connect signals from model
         model = self.model()
-        model.start_row_animation_signal.connect(self.start_row_animation)
         model.dataChanged.connect(self.set_row_height)
         model.rowsInserted.connect(self.set_span_for_quicktasks)
-        # model.rowsInserted.connect(self.start_row_animation)
 
     def set_view_properties(self):
-
         # Hide columns ID, Type, and Position
         for col_index in (0, 6, 7):
             self.setColumnHidden(col_index, True)
@@ -118,14 +111,12 @@ class TableView(QTableView):
             task_type = self.model().get_item_from_model(row, Columns.Type.value)
             if task_type == 'QuickTask':
                 self.setRowHeight(row, 28)
-            elif row == self.animating_row_index:
-                self.setRowHeight(row, self._animated_row_height)
             else:
                 self.setRowHeight(row, 40)
 
     def set_styles(self):
-        pass
-        # self.setStyleSheet(table_qss.CORNER_BTN_STYLE)
+
+        self.setStyleSheet(table_qss.CORNER_BTN_STYLE)
 
     def set_columns_widths(self):
         task_type = self.model().get_item_from_model(0, Columns.Type.value)
@@ -142,11 +133,6 @@ class TableView(QTableView):
             self.setColumnWidth(col_index, 60)
         self.header_view.setSectionResizeMode(4, self.header_view.ResizeMode.Stretch)  # Task Name
 
-    def paintEvent(self, event):
-        painter = QPainter(self.viewport())
-        background_bg = "#EFEFE5"  # Original: EFEFE5
-        painter.fillRect(self.viewport().rect(), QColor(background_bg))
-        super().paintEvent(event)
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -162,7 +148,7 @@ class TableView(QTableView):
         if not index.isValid():
             # If the click was on an empty area, clear the selection
             # apparently, this makes index.row() to be -1
-            self.clearFocus()
+            self.clearSelection()
             self.update_selection_index.emit(index)
         else:
             super().mousePressEvent(event)

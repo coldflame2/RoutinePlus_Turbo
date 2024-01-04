@@ -33,22 +33,21 @@ class ModelUtilityService:
             return False
 
         try:
-            self.insert_row_in_sqlite(row, data_to_insert)
-        except Exception as e:
-            logging.error(f"Exception type: {type(e)}. Error:{e}")
-            return False
-
-        try:
             logging.debug(f"Emitting signal for row animation from ModelUtilityService.")
-            self.model.animation_after_row_insertion(row)
         except Exception as e:
             logging.error(f"Exception type: {type(e)}. Error:{e}")
 
         return True
 
     def insert_row_in_sqlite(self, row, data_to_insert):
-        row_id = self.model.app_data.insert_new_row(data_to_insert)
-        self.model.set_item_in_model(row, 'id', row_id)
+        try:
+            row_id = self.model.app_data.insert_new_row(data_to_insert)
+            self.model.set_item_in_model(row, 'id', row_id)
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+            return False
+
+        return True
 
     def delete_row_and_data(self, row):
         logging.debug(f"Deleting row: '{row}'")

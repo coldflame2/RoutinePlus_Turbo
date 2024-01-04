@@ -61,7 +61,7 @@ class MainApp(QApplication):
         logging.warning(f"****CLOSING DOWN IN PROGRESS. [closing source: {source}]****")
 
         try:
-            self.main_window.set_win_state_and_geometry()
+            self.main_window.save_current_state_geometry_to_settings()
             self.main_window.closing_source = source
 
             # Get "if confirmation needed" setting

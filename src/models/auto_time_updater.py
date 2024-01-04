@@ -434,13 +434,15 @@ class AutoTimeUpdater:
         affected_row (int): The index of the row where the operation (addition or deletion) occurred.
         operation (str): Type of operation, either 'add' or 'delete'.
         """
-        logging.debug(f"Updating sequences of rows below row index: {first_row_to_update} after {operation} operation.")
+        logging.debug(f"Updating sequences of all rows starting from: {first_row_to_update} after {operation} operation.")
 
         # Determine the operation type: addition or deletion
         position_change = 1 if operation == 'add' else -1
 
         position_row_above = self.model.get_item_from_model(first_row_to_update - 1, Columns.Position.value)
+        logging.debug(f"Position of row above: {position_row_above}")
         current_position = position_row_above + position_change if operation == 'add' else position_row_above
+        logging.debug(f"current_position:{current_position}")
 
         for row in range(first_row_to_update, self.model.rowCount()):
             col_key = Columns.Position.value
@@ -449,6 +451,7 @@ class AutoTimeUpdater:
 
             try:
                 update_successful = self.model.set_item_in_model(row, col_key, new_position)
+                print(f"row and position:{row}, {new_position}")
                 if not update_successful:
                     logging.error(f"Updating sequence for row: {row} failed.")
                     return False

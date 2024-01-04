@@ -1,4 +1,5 @@
 main_color = '#212121'
+opacity = 0.50
 title_bar_color = main_color
 title_bar_border_color = "#CCD4F0"
 

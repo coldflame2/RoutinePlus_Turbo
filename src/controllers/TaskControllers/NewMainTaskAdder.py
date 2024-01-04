@@ -1,5 +1,7 @@
 import logging
 
+from PyQt6.QtCore import QTimer
+
 from controllers.TaskControllers import TaskUtilityService
 
 
@@ -19,7 +21,7 @@ def initiate_maintask_addition(model, view):
         return
 
     try:
-        _insert_and_update(clicked_row, data_for_update, model)
+        _insert_and_update(clicked_row, data_for_update, view, model)
 
     except Exception as e:
         logging.error(f"{e} Error. Type:{type(e)} during NewTask insert operation.")
@@ -32,7 +34,6 @@ def _prepare_data_for_task_insertion(clicked_row, model):
         linked_maintask = TaskUtilityService.find_linked_maintask(model, clicked_row)
 
         updates_linked_maintask = model.auto_timeUpdater.calculate_updates_linked_maintask(linked_maintask)
-        print(f"updates_linked_maintask = {updates_linked_maintask}")
 
         data_new_maintask = TaskUtilityService.calculate_data_new_maintask(updates_linked_maintask)
 
@@ -48,7 +49,7 @@ def _prepare_data_for_task_insertion(clicked_row, model):
     return prepared_data
 
 
-def _insert_and_update(clicked_row, prepared_data, model):
+def _insert_and_update(clicked_row, prepared_data, view, model):
     """
     Flow:
      - First update linked MainTask (or clicked row if it is already the MainTask)
@@ -71,6 +72,12 @@ def _insert_and_update(clicked_row, prepared_data, model):
         logging.error(f"Inserting new MainTask Failed. Type:{type(e)}. Error:{e}")
         raise e
 
+    try:
+        model.model_utility_service.insert_row_in_sqlite(clicked_row + 1, prepared_data[1])
+    except Exception as e:
+        logging.error(f"Inserting new MainTask in SQLite database. Type:{type(e)}. Error:{e}")
+        raise e
+
     # Update data in row below new
     try:
         model.auto_timeUpdater.update_shifted_maintask(prepared_data[2])
@@ -84,4 +91,10 @@ def _insert_and_update(clicked_row, prepared_data, model):
     except Exception as e:
         logging.error(f"Error when updating positions after new task was added. Exception type: {type(e)}. "
                       f"Error:{e}")
+        raise e
+
+    try:
+        view.new_rows_visuals(clicked_row + 1)
+    except Exception as e:
+        logging.error(f"Exception when calling start_row_animation. type: {type(e)}. Error:{e}")
         raise e

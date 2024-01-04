@@ -1,7 +1,7 @@
 import logging
 
-from PyQt6.QtCore import QModelIndex, Qt, QSize
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PyQt6.QtCore import QModelIndex, Qt, QSize, QRect
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QFontDatabase
 from PyQt6.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate, QStyle, QLineEdit
 
 from resources.default import Columns
@@ -12,12 +12,19 @@ class Delegate(QStyledItemDelegate):
     def __init__(self, view, parent=None):
         super().__init__(parent)
         self.view = view
-        self.font = QFont("Roboto", 10)
 
         self.define_padding_and_color()
 
         self.row_type = {}  # {row:type}
         self.update_row_type()  # Update row types at initialization
+
+        # For Animation purposes: New row/task
+        self.new_row_thickness_animated = 0
+        self.fill_opacity_animated = 0
+        self.animated_bottom_padding = 0
+
+        # For Animation purposes: At main window launch
+        self.txt_opacity = 0
 
         self.clicked_index = None
         self.selected_row = None
@@ -32,11 +39,13 @@ class Delegate(QStyledItemDelegate):
 
         self.fill = "#FFFFFF"
 
-        self.fill_hover = "#FAFAFF"
-        self.border_hover = "#B0B0B5"  # Darker version of fill_hover
+        self.fill_hover = "#E3E5F5"
+        self.border_hover = "#484D61"
 
-        self.fill_selected_row = "#EEEEF3"  # EEEEF3
+        self.fill_selected_row = "#E1E1E6"
         self.fill_selected_index = "#E4E4E9"
+
+        self.line_selected_row_keyboard = "#288ADD"
 
         self.fill_qt = "#EBFAFF"  # for quicktask
 
@@ -77,10 +86,19 @@ class Delegate(QStyledItemDelegate):
         self.paint_text_4(painter, option, text_data)
 
     def set_painter_basics(self, painter):
-        self.font.setWeight(QFont.Weight.Light)
+        font_family = "Calibri Light"
+        font_db = QFontDatabase
+
+        if font_family in font_db.families():
+            self.font = QFont(font_family, 11)
+        else:
+            self.font = QFont('Arial', 10)
+
+        self.font.setWeight(QFont.Weight.Normal)
         painter.setFont(self.font)
 
-        pen = QPen(QColor('black'), 2)
+        pen_color = QColor(0, 0, 0, self.txt_opacity)
+        pen = QPen(pen_color, 1)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)  # Smooth end caps for lines
         painter.setPen(pen)
 
@@ -89,7 +107,8 @@ class Delegate(QStyledItemDelegate):
 
     def default_paint_1(self, painter, option):
         fill_rect = helper_fn.add_padding(option.rect, self.fill_padding)
-        painter.fillRect(fill_rect, QColor(self.fill))
+        default_fill_color = QColor(self.fill)
+        painter.fillRect(fill_rect, default_fill_color)
 
     def main_or_quicktask_2(self, painter, option, index):
         # Get type
@@ -103,6 +122,45 @@ class Delegate(QStyledItemDelegate):
         is_focused = option.state & QStyle.StateFlag.State_HasFocus
         is_selected = option.state & QStyle.StateFlag.State_Selected
 
+        # Drawing ellipse
+        try:
+            column_index = self.view.model().column_index(Columns.Reminder.value)
+        except Exception as e:
+            logging.error(f"Exception type: {type(e)}. Error:{e}")
+            column_index = 0
+
+        if index.row() == self.view.new_added_row:
+            color = QColor(10, 10, 80, self.fill_opacity_animated)
+            painter.fillRect(option.rect, color)
+
+            white_to_black = self.fill_opacity_animated  # 255 to 0
+            pen_color = QColor(white_to_black, white_to_black, white_to_black)
+            pen = QPen(pen_color)
+            painter.setPen(pen)
+
+        # Paint green dot
+
+        if index.row() in self.view.recent_rows_ids:
+            self.font.setWeight(QFont.Weight.DemiBold)
+            painter.setFont(self.font)
+
+            if index.column() == column_index:
+                pen = QPen(QColor("#36EF36"))
+                brush = QBrush(QColor("#36EF36"))
+                painter.setBrush(brush)
+                painter.setPen(pen)
+                ellipse_size = 5
+                try:
+                    ellipse_rect = QRect(int(option.rect.center().x() - ellipse_size / 2) + 30,
+                                         int(option.rect.center().y() - ellipse_size / 2) + 1,
+                                         ellipse_size, ellipse_size)
+                    painter.drawEllipse(ellipse_rect)
+                    pen = QPen(QColor("#000000"))
+                    painter.setPen(pen)
+
+                except Exception as e:
+                    logging.error(f"Exception type: {type(e)}. Error:{e}")
+
         # Clicked cell
         if self.clicked_index and index == self.clicked_index:
             fill_rect = helper_fn.add_padding(option.rect, (0, 0, 0, 0))
@@ -110,14 +168,23 @@ class Delegate(QStyledItemDelegate):
 
         # Selected row minus clicked cell
         if self.selected_row is not None and index.row() == self.selected_row and self.clicked_index != index:
-            fill_rect = helper_fn.add_padding(option.rect, (0, 0, 0, 0))
+            painter.fillRect(option.rect, QColor('black'))  # To override system default
+
+            fill_rect = helper_fn.add_padding(option.rect, self.fill_padding)
             painter.fillRect(fill_rect, QColor(self.fill_selected_row))
 
         # row selected by arrow keys
         if is_selected and index.row() != self.selected_row:
-            fill_rect = helper_fn.add_padding(option.rect, (0, 0, 0, 0))
-            painter.fillRect(fill_rect, QColor(self.fill))
+            painter.fillRect(option.rect, QColor('black'))  # To override system default
+
+            pad_rect = helper_fn.add_padding(option.rect, self.fill_padding)
+            painter.fillRect(pad_rect, QColor(self.fill))
+
+            painter.save()
+            pen = QPen(QColor(self.line_selected_row_keyboard), 5)
+            painter.setPen(pen)
             painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
+            painter.restore()
 
         if is_focused:
             fill_rect = helper_fn.add_padding(option.rect, (0, 0, 0, 0))
@@ -147,8 +214,13 @@ class Delegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         editor = QLineEdit(parent)
         font = editor.font()
-        font.setPointSize(1)
+        font.setPointSize(10)
         editor.setFont(font)
+        text_color = "#000000"
+        background_color = self.fill_qt
+        editor.setStyleSheet(f"background-color: {background_color};"
+                             f"color: {text_color}")
+
         return editor
 
     def sizeHint(self, option, index):
